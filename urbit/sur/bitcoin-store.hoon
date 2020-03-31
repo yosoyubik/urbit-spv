@@ -6,7 +6,9 @@
 +$  bitcoin-action
   $%  [%add =xpub]
       [%remove ~]
-      [%derive ship]
+      [%derive =ship]
+      [%request =ship]
+      [%receive @uc]
   ==
 ::
 +$  bitcoin-update

@@ -1,5 +1,7 @@
 module.exports = {
   URBIT_PIERS: [
     "/Users/jose/urbit/urbit.ubik/zod/base",
+    "/Users/jose/urbit/urbit.ubik/fyr/home",
+    "/Users/jose/urbit/urbit.ubik/lur/home",
   ]
 };

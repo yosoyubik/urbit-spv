@@ -1,6 +1,6 @@
 ::  Sends an action to the Bitcoin app
 ::
-/-  *bitcoin-store
+/-  *bitcoin
 ::
 :-  %say
 |=  $:  [now=@da eny=@uvJ =beak]

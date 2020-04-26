@@ -10,6 +10,7 @@ var resolve = require('rollup-plugin-node-resolve');
 var commonjs = require('rollup-plugin-commonjs');
 var rootImport = require('rollup-plugin-root-import');
 var globals = require('rollup-plugin-node-globals');
+var json = require('rollup-plugin-json');
 
 /***
   Main config options
@@ -52,19 +53,21 @@ gulp.task('js-imports', function(cb) {
   return gulp.src('dist/index.js')
     .pipe(rollup({
       plugins: [
+        resolve({browser: true}),
         commonjs({
           namedExports: {
             'node_modules/react/index.js': [ 'Component' ],
             'node_modules/react-is/index.js': [ 'isValidElementType' ],
-          }
+          },
+          ignoreGlobal: true
         }),
+        json(),
         rootImport({
           root: `${__dirname}/dist/js`,
           useEntry: 'prepend',
           extensions: '.js'
         }),
-        globals(),
-        resolve()
+        globals()
       ]
     }, 'umd'))
     .on('error', function(e){
@@ -127,7 +130,7 @@ gulp.task('urbit-copy', function () {
 gulp.task('js-bundle-dev', gulp.series('jsx-transform', 'js-imports'));
 gulp.task('tile-js-bundle-dev', gulp.series('tile-jsx-transform', 'tile-js-imports'));
 gulp.task('js-bundle-prod', gulp.series('jsx-transform', 'js-imports', 'js-minify'))
-gulp.task('tile-js-bundle-prod', 
+gulp.task('tile-js-bundle-prod',
   gulp.series('tile-jsx-transform', 'tile-js-imports', 'tile-js-minify'));
 
 gulp.task('bundle-dev',

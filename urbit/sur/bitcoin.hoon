@@ -1,13 +1,14 @@
 ::  Types
 ::
 |%
-+$  xpub  tape
++$  xpub     tape
++$  network  ?(%main %regtest %testnet)
 ::
 +$  bitcoin-action
   $%  [%add =xpub]
       [%remove ~]
-      [%derive =ship]
-      [%request =ship]
+      [%derive [=ship net=network]]
+      [%request [=ship net=network]]
       [%receive @uc]
   ==
 ::

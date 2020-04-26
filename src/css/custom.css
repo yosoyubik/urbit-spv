@@ -75,6 +75,45 @@ h2 {
   mix-blend-mode: difference;
 }
 
+.dt {
+    display: table;
+}
+
+.dtc {
+    display: table-cell;
+}
+
+.dt--fixed {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.bg-black-10 {
+    background-color: rgba(0, 0, 0, .1);
+}
+
+.bg-black-05 {
+    background-color: rgba(0, 0, 0, .05);
+}
+
+.animated-width {
+  transition: width 500ms ease-out;
+}
+
+.blink {
+  animation: s0 1s steps(2, forwards) infinite;
+  -webkit-animation: s0 1s steps(2, forwards) infinite;
+}
+
+.absolute,
+.abs {
+  position: absolute;
+}
+
+.relative,
+.rel {
+  position: relative; }
+
 /* dark */
 
 @media (prefers-color-scheme: dark) {

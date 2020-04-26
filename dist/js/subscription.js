@@ -7,17 +7,17 @@ import urbitOb from 'urbit-ob';
 export class Subscription {
   start() {
     if (api.authTokens) {
-      // this.initializebitcoin();
+      this.initializebitcoin();
     } else {
       console.error("~~~ ERROR: Must set api.authTokens before operation ~~~");
     }
   }
 
-  // initializebitcoin() {
-  //   api.bind('/primary', 'PUT', api.authTokens.ship, 'bitcoin',
-  //     this.handleEvent.bind(this),
-  //     this.handleError.bind(this));
-  // }
+  initializebitcoin() {
+    api.bind('/primary', 'PUT', api.authTokens.ship, 'bitcoin',
+      this.handleEvent.bind(this),
+      this.handleError.bind(this));
+  }
 
   handleEvent(diff) {
     store.handleEvent(diff);

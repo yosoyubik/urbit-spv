@@ -8,6 +8,21 @@ This repository is available as a template; to immediately generate your applica
 
 In order to run your application on your ship, you will need Urbit v.0.10.0 or higher. On your Urbit ship, if you haven't already, mount your pier to Unix with `|mount %`.
 
+```
+cd cd node_modules/bcoin
+bpkg --browser --umd --plugin [ uglify-es --toplevel ] --name BCoin --output ../../src/js/vendor/bcoin.js ./lib/bcoin.js
+```
+
+Test mnemonics:
+
+```
+benefit crew supreme gesture quantum web media hazard theory mercy wing kitten
+```
+
+```
+abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
+```
+
 ## Using
 
 Once you're up and running, your tile lives in `tile/tile.js`, which uses [React](https://reactjs.org) to render itself -- you'll want a basic foothold with it first. When you make changes, the `urbit` directory will update with the compiled application and, if you're running `npm run serve`, it will automatically copy itself to your Urbit ship when you save your changes (more information on that below).

@@ -4,8 +4,8 @@
 ::
 ::    xpub             .^(tape %gx /=bitcoin=/xpub/noun)
 ::
-/-  *bitcoin-store
-/+  *server, default-agent, verb, bip32
+/-  *bitcoin
+/+  *server, default-agent, verb, bip32, *bitcoin
 ::
 /=  index
   /^  octs
@@ -25,6 +25,27 @@
   /^  octs
   /;  as-octs:mimes:html
   /:  /===/app/bitcoin/js/index
+  /|  /js/
+      /~  ~
+  ==
+/=  bcoin
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/bcoin
+  /|  /js/
+      /~  ~
+  ==
+/=  proxy
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/proxy
+  /|  /js/
+      /~  ~
+  ==
+/=  logger
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/logger
   /|  /js/
       /~  ~
   ==
@@ -66,15 +87,15 @@
     ::
     ++  on-init
       ^-  (quip card _this)
-      :_  this(xpub ~)
+      :: :_  this(xpub ~)
+      :_  this(xpub "tpubD6NzVbkrYhZ4XnhCewQV4KAr7up7HhgQUEbjFYyiBde3Uau2G3zx25wJchZi9Wubh538fyaXsrQZ2pHj8XzyDZpG3PbXG2vv8b6UtkoVaJ3")
       :~  launch-poke
-          [%pass / %arvo %e %connect [~ /'~bitcoin'] %bitcoin]
+          [%pass /bind/bitcoin %arvo %e %connect [~ /'~bitcoin'] %bitcoin]
       ==
     ::
     ++  on-poke
       |=  [=mark =vase]
       ^-  (quip card _this)
-      ?>  (team:title our.bowl src.bowl)
       ?+    mark  (on-poke:def mark vase)
           %json
         =^  cards  state
@@ -96,12 +117,14 @@
     ::
     ++  on-watch
       |=  =path
-      ^-  (quip card:agent:gall _this)
+      ^-  (quip card _this)
       ?:  ?=([%http-response *] path)
         `this
-      ?.  =(/ path)
+      ?.  =(/primary path)
+        ~&  [src.bowl path]
         (on-watch:def path)
-      [[%give %fact ~ %json !>(*json)]~ this]
+      =/  message=json  (frond:enjs:format [%initial b+?:(=(xpub "") | &)])
+      [[%give %fact ~ %json !>(message)]~ this]
     ::
     ++  on-agent  on-agent:def
     ::
@@ -121,7 +144,7 @@
       |=  =path
       ^-  (unit (unit cage))
       ?+  path  (on-peek:def path)
-          [%x %xpub ~]     ``noun+!>(xpub)
+          [%x %xpub ~]  ``noun+!>(xpub)
       ==
     ++  on-fail   on-fail:def
     --
@@ -129,24 +152,33 @@
 ::
 =,  bip32
 |_  =bowl:gall
+++  launch-poke
+  ^-  card
+  :*  %pass
+      /launch/bitcoin
+      %agent
+      [our.bowl %launch]
+      %poke
+      %launch-action
+      !>([%add %bitcoin /bitcointile '/~bitcoin/js/tile.js'])
+  ==
+::
+++  derive-poke
+  |=  act=bitcoin-action
+  ?>  ?=(%derive -.act)
+  ^-  card
+  [%pass / %agent [ship.act %bitcoin] %poke %bitcoin-action !>(act)]
+::
+++  receive-poke
+  |=  [=ship act=bitcoin-action]
+  ^-  card
+  [%pass / %agent [ship %bitcoin] %poke %bitcoin-action !>(act)]
+::
 ++  handle-json
   |=  jon=json
   ^-  (quip card _state)
-  |^
   ?>  (team:title our.bowl src.bowl)
-  (handle-bitcoin-action (json-to-btc-action jon))
-  ::
-  ++  json-to-btc-action
-    |=  jon=json
-    ^-  bitcoin-action
-    =,  dejs:format
-    =<  (parse-json jon)
-    |%
-    ++  parse-json
-      %-  of
-      [%request (cu @p (su fed:ag))]~
-    --
-  --
+  (handle-bitcoin-action (json-to-bitcoin-action jon))
 ::
 ++  handle-bitcoin-action
   |=  act=bitcoin-action
@@ -155,8 +187,8 @@
   ?-  -.act
       %add      (handle-add xpub.act)
       %remove   handle-remove
-      %request  (handle-request ship.act)
-      %derive   (handle-derive ship.act)
+      %request  (handle-request [ship.act net.act])
+      %derive   (handle-derive [ship.act net.act])
       %receive  (handle-receive +.act)
   ==
   ::
@@ -172,16 +204,17 @@
     [~ state(xpub ~)]
   ::
   ++  handle-request
-    |=  =ship
+    |=  [=ship =network]
     ^-  (quip card _state)
-    [[(derive-poke ship)]~ state]
+    [[(derive-poke [%derive [ship network]])]~ state]
   ::
   ++  handle-derive
-    |=  account=@
+    |=  [account=@ net=network]
     ^-  (quip card _state)
     |^
-    =/  addr=@uc
-      (derive-address (derivation-path account random-index))
+    =/  addr=@uc  (derive-address random-index net)
+      :: %+  derive-address  net
+      :: (derivation-path account random-index net)
     :_  state
     ?:  (team:title our.bowl src.bowl)
       ::  Local derive
@@ -189,55 +222,95 @@
       ~&(addr ~)
     ::  Foreign derive
     ::
-    [(receive-poke src.bowl addr)]~
+    [(receive-poke src.bowl [%receive addr])]~
     ::
     ++  derive-address
-      |=  path=tape
+      :: |=  [=network path=tape]
+      |=  [index=@ =network]
       ^-  @uc
-      =<  identity
-      (derive-path:(from-extended xpub) path)
+      :: =+  (derive-path:(from-extended xpub) path)
+      :: (address network)
+      ::
+      ::  BIP 44: m / purpose / coin_type / account / change / address_index
+      ::  xpub has been generated with:  m / 44 / network
+      ::
+      :: =>  .
+      :: =<  (address network)
+      :: =<  (from-extended xpub)
+      ::  Random index for each derivation
+      ::
+      ~&  [network xpub]
+      =+  (from-extended xpub)
+      ~&  public-key+`@ux`public-key
+      =+  (derive-sequence ~[0 0])
+      ~&  public-key+`@ux`public-key
+      ~&  (address network)
+      ~&  identity
+      :: ~&  (address network)
+
+
+      0cmn8xJjYWUAPGrnFCDgTtARWsajjPLZgzEt
+      :: ~&  [network (address network)]
+      :: ~&  [%main (address %main)]
+      :: ~&  [network (pub-extended network)]
+      :: ~&  [%main (pub-extended %main)]
+      :: ~&  [%identity `@uc`identity]
+      :: identity
+      :: (derive-path:(from-extended xpub) path)
+    ::
+    ++  type-from-network
+      |=  =network
+      ^-  tape
+      ?-  network
+        %main     "0"
+        %regtest  "1"
+        %testnet  "1"
+      ==
     ::
     ++  derivation-path
-      |=  [account=@ index=@]
+      |=  [account=@ index=@ =network]
+      ^-  tape
+      =-  ~&  -  -
+      ::  With an extended public key, we can only derive *non-hardened* keys
+      ::
+      ::  Warning: (https://bitcoin.stackexchange.com/a/37489) [1]
+      ::
+      ::  Non-hardened public keys are weaker because if xpubkey is leaked
+      ::  together with one of the non-hardened private keys, it would allow
+      ::  an attacker to know the private key of the extended public key,
+      ::  and all the address derived from it.
+      ::
+      ::  But, "even if an attacker gets ahold of one of the private keys,
+      ::  in situations where the attacker doesn't have access to the extended
+      ::  public key, non-hardened is equivalent to hardened security." [1]
+      ::
       ::  BIP 44: m / purpose / coin_type / account / change / address_index
       ::
-      "m/44/0/{((d-co:co 1) account)}/0/{((d-co:co 1) index)}"
+      =/  coin-type=tape  (type-from-network network)
+      ~&  coin-type+coin-type
+      "m/44/{coin-type}/{((d-co:co 1) account)}/0/{((d-co:co 1) index)}"
     --
   ::
   ++  handle-receive
     |=  address=@uc
+    ^-  (quip card _state)
+    =/  message=json
+      (frond:enjs:format [%address s+(base58-to-cord address)])
     :_  state
-    [%give %fact ~[/bitcointile] %json !>(s+(base58-to-cord address))]~
+    [%give %fact ~[/primary] %json !>(message)]~
   --
-::
-++  derive-poke
-  |=  =ship
-  ^-  card
-  [%pass / %agent [ship %bitcoin] %poke %derive !>(ship)]
-::
-++  receive-poke
-  |=  [=ship address=@uc]
-  ^-  card
-  [%pass / %agent [ship %bitcoin] %poke %receive !>(address)]
-::
-++  launch-poke
-  ^-  card
-  :*  %pass
-      /bitcoin
-      %agent
-      [our.bowl %launch]
-      %poke
-      [%launch-action !>([%bitcoin /bitcointile '/~bitcoin/js/tile.js'])]
-  ==
 ::
 ++  poke-handle-http-request
   |=  =inbound-request:eyre
   ^-  simple-payload:http
   =+  url=(parse-request-line url.request.inbound-request)
   ?+  site.url  not-found:gen
-      [%'~bitcoin' %css %index ~]  (css-response:gen style)
-      [%'~bitcoin' %js %tile ~]    (js-response:gen tile-js)
-      [%'~bitcoin' %js %index ~]   (js-response:gen script)
+      [%'~bitcoin' %css %index ~]   (css-response:gen style)
+      [%'~bitcoin' %js %tile ~]     (js-response:gen tile-js)
+      [%'~bitcoin' %js %index ~]    (js-response:gen script)
+      [%'~bitcoin' %js %bcoin ~]    (js-response:gen bcoin)
+      [%'~bitcoin' %js %proxy ~]    (js-response:gen proxy)
+      [%'~bitcoin' %js %logger ~]   (js-response:gen logger)
   ::
       [%'~bitcoin' %img @t *]
     =/  name=@t  i.t.t.site.url
@@ -258,7 +331,8 @@
 ::
 ++  random-index
   ^-  @ud
-  (~(rad og eny.bowl) (pow 2 31))
+  0
+  :: (~(rad og eny.bowl) (pow 2 31))
 ::
 ++  parse-btc
   |=  b=@t

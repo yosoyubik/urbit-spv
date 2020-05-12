@@ -49,6 +49,27 @@
   /|  /js/
       /~  ~
   ==
+/=  worker
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/worker
+  /|  /js/
+      /~  ~
+  ==
+/=  bledger
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/bledger
+  /|  /js/
+      /~  ~
+  ==
+/=  bmanager
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/bmanager
+  /|  /js/
+      /~  ~
+  ==
 /=  style
   /^  octs
   /;  as-octs:mimes:html
@@ -87,8 +108,9 @@
     ::
     ++  on-init
       ^-  (quip card _this)
-      :: :_  this(xpub ~)
-      :_  this(xpub "tpubD6NzVbkrYhZ4XnhCewQV4KAr7up7HhgQUEbjFYyiBde3Uau2G3zx25wJchZi9Wubh538fyaXsrQZ2pHj8XzyDZpG3PbXG2vv8b6UtkoVaJ3")
+      :_  this(xpub ~)
+      :: :_  this(xpub "tpubD6NzVbkrYhZ4XnhCewQV4KAr7up7HhgQUEbjFYyiBde3Uau2G3zx25wJchZi9Wubh538fyaXsrQZ2pHj8XzyDZpG3PbXG2vv8b6UtkoVaJ3")
+      :: :_  this(xpub "tpubDCM6CKkxH8ZLGRWSLzX641zu8Ei8HgfeNsDxg1X9sWY3dCdeFb7XorHgGBA6iWAgCCAinSfYTmt8eF4VxBe7i8EHEZkR8tVLCUwA7DmZhmw")
       :~  launch-poke
           [%pass /bind/bitcoin %arvo %e %connect [~ /'~bitcoin'] %bitcoin]
       ==
@@ -225,31 +247,29 @@
     [(receive-poke src.bowl [%receive addr])]~
     ::
     ++  derive-address
-      :: |=  [=network path=tape]
       |=  [index=@ =network]
       ^-  @uc
-      :: =+  (derive-path:(from-extended xpub) path)
-      :: (address network)
+      ::  BIP 44: m / purpose' / coin_type' / account' / change / index
+      ::  xpub generated with:  m / 44' / network / 0 <- default-account
       ::
-      ::  BIP 44: m / purpose / coin_type / account / change / address_index
-      ::  xpub has been generated with:  m / 44 / network
-      ::
-      :: =>  .
-      :: =<  (address network)
-      :: =<  (from-extended xpub)
+      =;  hd-path
+        (~(address hd-path +<.hd-path) network)
+      =>   [(from-extended xpub) .]
+      (derive-path "m/0/{((d-co:co 1) index)}")
+      :: =/  hd-initial  (from-extended xpub)
+      :: (~(derive-sequence hd-initial +<.hd-initial) ~[0 index])
+
       ::  Random index for each derivation
       ::
-      ~&  [network xpub]
-      =+  (from-extended xpub)
-      ~&  public-key+`@ux`public-key
-      =+  (derive-sequence ~[0 0])
-      ~&  public-key+`@ux`public-key
-      ~&  (address network)
-      ~&  identity
+      :: ~&  [network xpub]
+      :: =+  (from-extended xpub)
+      :: ~&  public-key+`@ux`public-key
+      :: =+  (derive-sequence ~[0 0])
+      :: ~&  public-key+`@ux`public-key
       :: ~&  (address network)
-
-
-      0cmn8xJjYWUAPGrnFCDgTtARWsajjPLZgzEt
+      :: ~&  identity
+      :: ~&  (address network)
+      :: 0cmn8xJjYWUAPGrnFCDgTtARWsajjPLZgzEt
       :: ~&  [network (address network)]
       :: ~&  [%main (address %main)]
       :: ~&  [network (pub-extended network)]
@@ -305,12 +325,15 @@
   ^-  simple-payload:http
   =+  url=(parse-request-line url.request.inbound-request)
   ?+  site.url  not-found:gen
-      [%'~bitcoin' %css %index ~]   (css-response:gen style)
-      [%'~bitcoin' %js %tile ~]     (js-response:gen tile-js)
-      [%'~bitcoin' %js %index ~]    (js-response:gen script)
-      [%'~bitcoin' %js %bcoin ~]    (js-response:gen bcoin)
-      [%'~bitcoin' %js %proxy ~]    (js-response:gen proxy)
-      [%'~bitcoin' %js %logger ~]   (js-response:gen logger)
+      [%'~bitcoin' %css %index ~]     (css-response:gen style)
+      [%'~bitcoin' %js %tile ~]       (js-response:gen tile-js)
+      [%'~bitcoin' %js %index ~]      (js-response:gen script)
+      [%'~bitcoin' %js %bcoin ~]      (js-response:gen bcoin)
+      [%'~bitcoin' %js %proxy ~]      (js-response:gen proxy)
+      [%'~bitcoin' %js %logger ~]     (js-response:gen logger)
+      [%'~bitcoin' %js %worker ~]     (js-response:gen worker)
+      [%'~bitcoin' %js %bledger ~]    (js-response:gen bledger)
+      [%'~bitcoin' %js %bmanager ~]   (js-response:gen bmanager)
   ::
       [%'~bitcoin' %img @t *]
     =/  name=@t  i.t.t.site.url

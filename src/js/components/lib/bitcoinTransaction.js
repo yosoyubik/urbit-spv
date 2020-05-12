@@ -22,7 +22,6 @@ export default class BitcoinTransaction extends Component {
   }
 
   buttonMessage(status, amount, point) {
-    console.log(status, amount, point);
     const label =
         status === STATE.INIT      ? `Enter @p and amount`
       : status === STATE.POINT     ? `Request New Address from ${point}`
@@ -61,6 +60,7 @@ export default class BitcoinTransaction extends Component {
     });
     await wallet.sign(mtx);
     const tx = mtx.toTX();
+    console.log(node);
     // We need to announce by hand since
     // spv nodes are always selfish
     node.relay(tx);
@@ -68,7 +68,6 @@ export default class BitcoinTransaction extends Component {
     await wdb.addTX(tx);
 
     const balance = await wallet.getBalance();
-    console.log(balance)
     // setConfirmedBalance(BCoin.Amount.btc(balance.confirmed));
     // setUnconfirmedBalance(BCoin.Amount.btc(balance.unconfirmed));
   }
@@ -122,21 +121,14 @@ export default class BitcoinTransaction extends Component {
 
   render() {
     const { props, state, buttonMessage, requestAddress, sendBTCTransaction } = this;
-    console.log(props);
-    console.log(props.address, props.point, props.amount);
-    console.log(props.point === '' , props.amount === 0);
+    console.log(props.node);
     const isDefaultState = ( props.point === undefined || props.amount === undefined );
     let isValidPoint;
     // let isReady;
-    console.log(isDefaultState);
     if (props.point) {
       isValidPoint = (!isDefaultState && urbitOb.isValidPatp(props.point));
-      console.log(isValidPoint);
-      console.log(props.address);
-  }
+    }
     const isReady = (isValidPoint && props.address !== undefined);
-    console.log(isReady);
-    console.log(isValidPoint, isReady);
 
     let createClasses = !isDefaultState
       ? "pointer db f9 mt7 green2 bg-gray0-d ba pv3 ph4 b--green2"

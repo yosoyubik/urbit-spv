@@ -1,15 +1,18 @@
-import React, { Component } from 'react';
+import React, { Component } from "react";
 import _ from 'lodash';
 import { BrowserRouter, Route } from "react-router-dom";
 
-import { store } from '/store';
-import { api } from '/api';
+import { store } from "/store";
+import { api } from "/api";
 
 import { HeaderBar } from "./lib/headerBar.js"
-import ProgressBar from './lib/progressBar';
-import BitcoinTransaction from './lib/bitcoinTransaction';
+import ProgressBar from "./lib/progressBar";
+import BitcoinTransaction from "./lib/bitcoinTransaction";
+import Ledger from "./lib/ledger";
+
 
 const BCoin = window.BCoin;
+
 
 export class Root extends Component {
   constructor(props) {
@@ -44,7 +47,6 @@ export class Root extends Component {
   }
 
   async loadMnemonic(event) {
-    console.log(event.target.value);
     this.setState({seed: event.target.value});
   }
 
@@ -79,7 +81,7 @@ export class Root extends Component {
       memory: false,
       logConsole: true,
       workers: true,
-      workerFile: 'bcoin/lib/workers/worker.js',
+      workerFile: '/~bitcoin/js/worker.js',
       createSocket: (port, host) => {
         return window.ProxySocket.connect(this.state.proxySocket, port, host);
       },
@@ -94,7 +96,6 @@ export class Root extends Component {
       plugins: [BCoin.wallet.plugin],
     }
     if (this.state.peerSeeds) {
-      console.log(this.state.peerSeeds);
       config.only = this.state.peerSeeds;
     }
     const spvNode = new BCoin.SPVNode(config);
@@ -130,10 +131,6 @@ export class Root extends Component {
     // const wallet = await wdb.ensure({ accountKey: xpub, id: ship, watchOnly: true });
     const key1 = await wallet.createReceive(0);
 
-    console.log(wallet);
-    console.log(wallet.master.key.xprivkey(spvNode.network.type));
-    console.log(wallet.master.key.xpubkey());
-    // console.log(wallet.master.mnemonic.phrase);
     console.log(key1.getAddress('string', spvNode.network.type));
 
     const ak = BCoin.HDPublicKey.fromBase58(xpub);
@@ -142,13 +139,8 @@ export class Root extends Component {
 
     console.log(addr2);
 
-    console.log(xpub);
-
     if (!this.state.hasXPub) {
-      api.add.xpubkey(xpub)
-      .then(() => {
-        this.setState({awaiting: false});
-      });
+      api.add.xpubkey(xpub);
     }
 
     wallet.on('balance', balance => {
@@ -182,10 +174,8 @@ export class Root extends Component {
 
     const totalTX = node.mempool ? node.mempool.map.size : 0;
     const size = node.mempool ? node.mempool.getSize() : 0;
-    console.log(node.chain.getProgress());
     let addr = node.pool.hosts.getLocal();
     if (!addr) addr = node.pool.hosts.address;
-    // console.log(node);
     const info = {
       network: node.network.type,
       chain: {
@@ -366,16 +356,18 @@ export class Root extends Component {
 
                 <div className={"w-50 fl pa2 pt4 overflow-x-hidden " +
                                 "bg-gray0-d white-d flex flex-column"}>
-                    <BitcoinTransaction
-                      amount={this.state.amount}
-                      point={this.state.point}
-                      api={api}
-                      address={this.state.address}
-                      network={this.state.network}
-                      wallet={this.state.wallet}
-                      node={this.state.node}
-                      wdb={this.state.wdb}
-                    />
+                    { (state.node) ?
+                      <BitcoinTransaction
+                        amount={state.amount}
+                        point={state.point}
+                        api={api}
+                        address={state.address}
+                        network={state.network}
+                        wallet={state.wallet}
+                        node={node}
+                        wdb={state.wdb}
+                      /> : null
+                    }
                   <div className="w-100">
                     <div className="w-third fl pa2">
                       <p className="f8 mt3 lh-copy db">Balance</p>
@@ -421,6 +413,12 @@ export class Root extends Component {
                       />
                     </div>
                   </div>
+                </div>
+
+
+                <div className={"w-100 fl pa2 pt4 overflow-x-hidden " +
+                                "bg-gray0-d white-d flex flex-column"}>
+                  <Ledger />
                 </div>
 
               </div>

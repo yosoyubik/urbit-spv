@@ -68,7 +68,6 @@
   %.  [d i p]
   =<  set-metadata
   =+  v=(swag [1 3] t)
-  ~&  k+k
   ?:  =("prv" v)  (from-private k c)
   ?:  =("pub" v)  (from-public k c)
   !!
@@ -150,8 +149,8 @@
     37^(can 3 ~[4^i 33^(ser-p pub)])
   ::  rare exception, invalid key, go to the next one
   ?:  (gte left n)  $(i +(i))  ::TODO  or child key is "point at infinity"
+  =.  pub  (jc-add.ecc (point left) pub)
   %_  +>.$
-    pub   (jc-add.ecc (point left) pub)
     cad   right
     dep   +(dep)
     ind   i
@@ -238,13 +237,16 @@
 ++  version-bytes
   |=  [network=?(%main %regtest %testnet) type=?(%pub %priv) bip32=?]
   ^-  @ux
-  ?:  bip32
-    ?:  |(=(%regtest network) =(%testnet network))
-      ?:(=(%pub type) 0x435.87cf 0x435.8394)
-    ?.  =(%main network)  ~|(%not-supported-version-bytes !!)
-    ?:(=(%pub type) 0x488.b21e 0x488.ade4)
-  ?:  |(=(%regtest network) =(%testnet network))
-    ?:(=(%pub type) 0x6f 0xef)
-  ?.  =(%main network)  ~|(%not-supported-version-bytes !!)
-  ?:(=(%pub type) 0x0 0x80)
+  |^  ?+  [network type]  ~|(%not-supported-version-bytes !!)
+        [?(%regtest %testnet) %pub]   ?:(bip32 xpub-key pay-to-pubkey)        ::0x435.87cf  :: xpub-key
+        [?(%regtest %testnet) %priv]  ?:(bip32 xpriv-key private-key)       ::0x435.8394  :: xpriv-key
+        [%main %pub]                  ?:(bip32 xpub-key pay-to-pubkey)       ::0x488.b21e  :: xpub-key
+        [%main %priv]                 ?:(bip32 xpriv-key private-key)       ::0x488.ade4  :: xpriv-key
+      ==
+  ::
+  ++  pay-to-pubkey  ?:(=(type %main) 0x0 0x6f)
+  ++  private-key    ?:(=(type %main) 0x80 0xef)
+  ++  xpub-key       ?:(=(type %main) 0x435.87cf 0x488.b21e)
+  ++  xpriv-key      ?:(=(type %main) 0x435.8394 0x488.ade4)
+  --
 --

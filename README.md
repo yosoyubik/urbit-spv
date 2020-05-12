@@ -9,8 +9,14 @@ This repository is available as a template; to immediately generate your applica
 In order to run your application on your ship, you will need Urbit v.0.10.0 or higher. On your Urbit ship, if you haven't already, mount your pier to Unix with `|mount %`.
 
 ```
-cd cd node_modules/bcoin
-bpkg --browser --umd --plugin [ uglify-es --toplevel ] --name BCoin --output ../../src/js/vendor/bcoin.js ./lib/bcoin.js
+cd node_modules/bcoin
+../bpkg/bin/bpkg --browser --umd --plugin [ uglify-es --toplevel ] --name BCoin --output ../../urbit/app/bitcoin/js/bcoin.js ./lib/bcoin.js
+../bpkg/bin/bpkg --browser --umd --plugin [ uglify-es --toplevel ] --name Logger --output ../../urbit/app/bitcoin/js/logger.js ./lib/logger.js
+../bpkg/bin/bpkg --browser --umd --plugin [ uglify-es --toplevel ] --name ProxySocket --output ../../urbit/app/bitcoin/js/proxy.js ./browser/src/proxysocket.js
+../bpkg/bin/bpkg --browser --umd --plugin [ uglify-es --toplevel ] --name Worker --output ../../urbit/app/bitcoin/js/worker.js ./lib/workers/worker.js
+
+cd node_modules/bledger
+../bpkg/bin/bpkg --browser --umd --plugin [ uglify-es --toplevel ] --name BLedger --output ../../urbit/app/bitcoin/js/bledger.js ./lib/bledger.js
 ```
 
 Test mnemonics:

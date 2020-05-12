@@ -15,7 +15,6 @@ class Store {
     constructor() {
 
         this.state = {
-            node: {},
             walletDB: {},
             account: {}
         };

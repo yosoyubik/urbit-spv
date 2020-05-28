@@ -26,18 +26,7 @@ export class Root extends Component {
     this.state.peerSeeds = ['127.0.0.1:48444'];
     this.state.network = 'regtest';
     this.state.account = 0;
-    // this.state.unConfirmedBalance = 0.0;
-    // this.state.confirmedBalance = 0.0;
-    //  FIXME: remove!
-    //
-    // this.state.amount = '0.2' ;
-    // this.state.point = "~sen";
-    // this.state.address = 'mpW3iVi2Td1vqDK8Nfie29ddZXf9spmZkX';
-    // this.state.amount = 0.0;
-    // this.state.point = null;
     this.state.sent = false;
-    // this.state.address = '';
-    // this.state.point = '';
 
     store.setStateHandler(this.setState.bind(this));
 
@@ -69,10 +58,6 @@ export class Root extends Component {
   }
 
   loadSocket(event) {
-    // const proto = 'ws';
-    // const proxy = '127.0.0.1';
-    // const proxyPort = 9090;
-    // `${proto}://${proxy}:${proxyPort}`,
     this.setState({proxySocket: event.target.value});
   }
 
@@ -91,132 +76,8 @@ export class Root extends Component {
     //  Account 0 is sent to the %bitcoin app for address derivation
     const key = privKey.derivePath(`m/44'/${coinType}'/${this.state.account}'`);
     const xpub = key.xpubkey(network);
-
-    // const keyring = new BCoin.KeyRing(privKey.privateKey);
-    // const keyring2 = new BCoin.KeyRing(key.derive(0).derive(0).privateKey);
     this.setState({ xpubkey: xpub, keyring: key });
     return {xpub: xpub, master: key};
-  }
-
-  async startNode() {
-    const { state } = this;
-    const config = {
-      hash: true,
-      network: state.network,
-      memory: false,
-      logConsole: true,
-      workers: true,
-      workerFile: '/~bitcoin/js/worker.js',
-      createSocket: (port, host) => {
-        return window.ProxySocket.connect(this.state.proxySocket, port, host);
-      },
-      logger: new window.Logger({
-        level: 'info',
-        console: true,
-      }),
-      // https://github.com/bcoin-org/bcoin/issues/935
-      // When running an SPV node with a wallet as a process there will be missing
-      // transactions from blocks.
-      // Solution: Run the SPV node and wallet in the same process as a plugin.
-      plugins: [BCoin.wallet.plugin],
-    }
-    if (state.peerSeeds) {
-      config.only = state.peerSeeds;
-    }
-    const spvNode = new BCoin.SPVNode(config);
-    const { wdb } = spvNode.require('walletdb');
-
-    await spvNode.ensure();
-    await spvNode.open();
-    await spvNode.connect();
-    spvNode.startSync();
-    const coinType = spvNode.network.keyPrefix.coinType;
-    const networkType = spvNode.network.type;
-    let xpub;
-    let master;
-    console.log(state);
-    if (state.seed) {
-      console.log("keyFromSeed");
-      const keys = this.keyFromSeed(coinType, networkType);
-      xpub = keys.xpub;
-      master = keys.master
-    }
-    else {
-      console.log("xpub loaded");
-      xpub = BCoin.HDPublicKey.fromBase58(state.xpubkey).xpubkey(networkType);
-    }
-    console.log(xpub);
-    const wallet = await wdb.ensure({
-      id: ship,
-      // master: master
-      accountKey: xpub,
-      watchOnly: true
-    });
-
-    const key1 = await wallet.createReceive(0);
-    console.log(key1.getAddress('string', spvNode.network.type));
-    // console.log(
-    //   key1.getAddress('string', spvNode.network.type),
-    //   "is this my address?",
-    //   wallet.hasAddress(key1),
-    //   wallet.getAccountByAddress(key1)
-    // );
-
-    const ak = BCoin.HDPublicKey.fromBase58(xpub);
-    const pk = ak.derive(0).derive(0);
-    const addr2 = new BCoin.KeyRing(pk);
-    const anAddr = BCoin.Address.fromBase58(
-      addr2.getAddress('base58', spvNode.network.type)
-    );
-    console.log(
-      anAddr,
-      "is this my address?",
-      await wallet.hasAddress(anAddr),
-      await wallet.getAccountByAddress(anAddr)
-    );
-    // Test
-
-
-
-    if (!state.hasXPub || state.seed) {
-      console.log("sending xpub");
-      api.add.xpubkey(xpub);
-    }
-
-    wallet.on('balance', balance => {
-      console.log('Balance updated:\n', balance.toJSON());
-      const nTX = balance.tx;
-      const coins = balance.coin;
-      this.setState({
-        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
-        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
-      });
-    });
-
-    spvNode.on('block', async block => { this.getInfo(); });
-    spvNode.on('block connect', async (block) => { this.getInfo(); });
-    spvNode.on('tx', async tx => {
-      console.log("new tx", tx);
-      await wdb.addTX(tx);
-      const balance = await wallet.getBalance();
-      const nTX = balance.tx;
-      const coins = balance.coin;
-      this.setState({
-        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
-        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
-      });
-    });
-    spvNode.pool.on('peer connect', () => { this.getInfo(); });
-    spvNode.pool.on('peer close', () => { this.getInfo(); });
-    spvNode.pool.on('peer open', () => { this.getInfo(); });
-    spvNode.pool.on('packet', () => { this.getInfo(); });
-
-    this.setState({
-      wallet: wallet,
-      node: spvNode,
-      wdb: wdb,
-      coinType: coinType
-    });
   }
 
   getInfo() {
@@ -264,7 +125,113 @@ export class Root extends Component {
       hash: node.chain.tip.rhash(),
       peers: peers
     });
+  }
 
+  async startNode() {
+    const { state } = this;
+    const config = {
+      hash: true,
+      network: state.network,
+      memory: false,
+      logConsole: true,
+      workers: true,
+      workerFile: '/~bitcoin/js/worker.js',
+      createSocket: (port, host) => {
+        return window.ProxySocket.connect(this.state.proxySocket, port, host);
+      },
+      logger: new window.Logger({
+        level: 'info',
+        console: true,
+      }),
+      // https://github.com/bcoin-org/bcoin/issues/935
+      // When running an SPV node with a wallet as a process there will be missing
+      // transactions from blocks.
+      // Solution: Run the SPV node and wallet in the same process as a plugin.
+      plugins: [BCoin.wallet.plugin],
+    }
+    if (state.peerSeeds) {
+      config.only = state.peerSeeds;
+    }
+    const spvNode = new BCoin.SPVNode(config);
+    const { wdb } = spvNode.require('walletdb');
+
+    await spvNode.ensure();
+    await spvNode.open();
+    await spvNode.connect();
+    spvNode.startSync();
+    const coinType = spvNode.network.keyPrefix.coinType;
+    const networkType = spvNode.network.type;
+    let xpub;
+    let master;
+    if (state.seed) {
+      const keys = this.keyFromSeed(coinType, networkType);
+      xpub = keys.xpub;
+      master = keys.master
+    }
+    else {
+      xpub = BCoin.HDPublicKey.fromBase58(state.xpubkey).xpubkey(networkType);
+    }
+    const wallet = await wdb.ensure({
+      id: ship,
+      // master: master
+      accountKey: xpub,
+      watchOnly: true
+    });
+
+    // Debugging
+    const ak = BCoin.HDPublicKey.fromBase58(xpub);
+    const pk = ak.derive(0).derive(0);
+    const addr2 = new BCoin.KeyRing(pk);
+    const anAddr = BCoin.Address.fromBase58(
+      addr2.getAddress('base58', spvNode.network.type)
+    );
+    console.log(
+      addr2.getAddress('base58', spvNode.network.type),
+      anAddr,
+      "is this my address?",
+      await wallet.hasAddress(anAddr),
+      await wallet.getAccountByAddress(anAddr)
+    );
+    // Test
+
+    if (!state.hasXPub || state.seed) {
+      console.log("sending xpub");
+      api.add.xpubkey(xpub);
+    }
+
+    wallet.on('balance', balance => {
+      console.log('Balance updated:\n', balance.toJSON());
+      const nTX = balance.tx;
+      const coins = balance.coin;
+      this.setState({
+        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
+        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
+      });
+    });
+
+    spvNode.on('block', async block => { this.getInfo(); });
+    spvNode.on('block connect', async (block) => { this.getInfo(); });
+    spvNode.on('tx', async tx => {
+      await wdb.addTX(tx);
+      const balance = await wallet.getBalance();
+      const nTX = balance.tx;
+      const coins = balance.coin;
+      this.setState({
+        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
+        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
+      });
+    });
+    spvNode.pool.on('peer connect', () => { this.getInfo(); });
+    spvNode.pool.on('peer close', () => { this.getInfo(); });
+    spvNode.pool.on('peer open', () => { this.getInfo(); });
+    spvNode.pool.on('packet', () => { this.getInfo(); });
+
+    this.setState({
+      wallet: wallet,
+      node: spvNode,
+      wdb: wdb,
+      coinType: coinType
+    });
   }
 
   render() {
@@ -302,8 +269,6 @@ export class Root extends Component {
                     <div className="mono wrap">
                       Current Hash: {state.hash}
                     </div>
-
-
                     { ProgressBar(( (state.progress) ? state.progress : 0) )}
                   </div>
                   <div className="cf w-20 fl pa2 pt4 overflow-x-hidden bg-gray0-d white-d flex flex-column">

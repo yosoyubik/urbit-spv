@@ -41,11 +41,9 @@ export default class Ledger {
 
   async deriveXPubKey(account) {
     const device = await this.connectLedger();
-    console.log('Getting pk..');
     const coinType = (this.network === 'main') ? 0 : 1;
     const path = `m/44'/${coinType}'/${account}'`;
     const pubkey = await this.manager.getPublicKey(path);
-    console.log('Public Key: ', pubkey.xpubkey(this.network));
     // props.loadXPubKey(pubkey.xpubkey(this.network), path, account);
     await device.close();
     await this.manager.close();
@@ -57,40 +55,9 @@ export default class Ledger {
   }
 
   async signTransaction(mtx, inputData) {
-    console.log("signTransaction");
     const device = await this.connectLedger();
-    console.log("connected");
-    console.log("mtx", mtx, mtx.mutable);
     const smtx = await this.manager.signTransaction(mtx.toTX(), inputData);
 
-    // const inputDataMap = new BufferMap();
-    // for (let data of inputData) {
-    //   const prevTX = data.prevTX;
-    //   console.log("signTransaction", BCoin.TX.isTX(data.prevTX));
-    //   if (!BInputData.isInputData(data))
-    //     data = BInputData.fromOptions(data);
-    //   const key = data.toKey();
-    //   data.prevTX = prevTX;
-    //   inputDataMap.set(key, data);
-    // };
-    //
-    // const ledgerInputs = createLedgerInputs(
-    //   tx,
-    //   inputDataMap,
-    //   network
-    // );
-    //
-    // const mtx = BCoin.MTX.fromTX(tx);
-    //
-    // // add coins to the view.
-    // for (const data of inputDataMap.values())
-    //   mtx.view.addCoin(data.coin);
-    //
-    // await this.manager.ledgerApp.signTransaction(mtx, ledgerInputs);
-    //
-    // const signedMtx = applyOtherSignatures(mtx, inputDataMap, network);
-    //
-    // console.log("signed");
     await device.close();
     await this.manager.close();
     return smtx;

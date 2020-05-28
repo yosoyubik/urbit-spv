@@ -41,56 +41,6 @@ export default class ConnectLedger extends Component {
     this.setState({account: event.target.value});
   }
 
-  // async connectLedger() {
-  //   const { props, state } = this;
-  //   console.log(props, state);
-  //   if (state.connected || state.account === undefined)
-  //     return;
-  //   console.log("mounting", state.manager);
-  //   console.log("opening", usb);
-  //   await state.manager.open();
-  //   console.log(state.manager);
-  //   const device = await state.manager.selectDevice();
-  //   console.log(device);
-  //   return device;
-  //   // // this.setState({ device: device });
-  //   // // this.renderManager();
-  //   await device.open();
-  //
-  //   this.setState({ connected: true });
-  //   // await state.manager.close();
-  // }
-  //
-  // deriveXPubKey() {
-  //   const device = this.connectLedger();
-  //   console.log('Getting pk..');
-  //   const coinType = (props.network === 'main') ? 0 : 1;
-  //   const path = `m/44'/${coinType}'/${state.account}'`;
-  //   const pubkey = await state.manager.getPublicKey(path);
-  //   console.log('Public Key: ', pubkey.xpubkey(props.network));
-  //   props.loadXPubKey(pubkey.xpubkey(props.network), path, state.account);
-  //   this.setState({ connected: false });
-  //   await device.close();
-  //   await state.manager.close();
-  // }
-  //
-  // async signTransaction(mtx, inputData) {
-  //   const { state } = this;
-  //   const device = this.connectLedger();
-  //   mtx = await state.manager.signTransaction(mtx, inputData);
-  //   await device.close();
-  //   await state.manager.close();
-  //   this.setState({ connected: false });
-  //   return mtx
-  // }
-  //
-  // deriveAddress(hd, change, index, network) {
-  //   const pubkey = hd.derive(change).derive(index);
-  //   const keyring = BCoin.KeyRing.fromPublic(pubkey.publicKey, network);
-  //
-  //   return keyring.getAddress().toString();
-  // }
-
   render() {
     const { props, state, deriveXPubKey } = this;
     let createClasses = !state.connected

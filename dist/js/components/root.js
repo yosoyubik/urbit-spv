@@ -26,18 +26,7 @@ export class Root extends Component {
     this.state.peerSeeds = ['127.0.0.1:48444'];
     this.state.network = 'regtest';
     this.state.account = 0;
-    // this.state.unConfirmedBalance = 0.0;
-    // this.state.confirmedBalance = 0.0;
-    //  FIXME: remove!
-    //
-    // this.state.amount = '0.2' ;
-    // this.state.point = "~sen";
-    // this.state.address = 'mpW3iVi2Td1vqDK8Nfie29ddZXf9spmZkX';
-    // this.state.amount = 0.0;
-    // this.state.point = null;
     this.state.sent = false;
-    // this.state.address = '';
-    // this.state.point = '';
 
     store.setStateHandler(this.setState.bind(this));
 
@@ -69,10 +58,6 @@ export class Root extends Component {
   }
 
   loadSocket(event) {
-    // const proto = 'ws';
-    // const proxy = '127.0.0.1';
-    // const proxyPort = 9090;
-    // `${proto}://${proxy}:${proxyPort}`,
     this.setState({proxySocket: event.target.value});
   }
 
@@ -91,132 +76,8 @@ export class Root extends Component {
     //  Account 0 is sent to the %bitcoin app for address derivation
     const key = privKey.derivePath(`m/44'/${coinType}'/${this.state.account}'`);
     const xpub = key.xpubkey(network);
-
-    // const keyring = new BCoin.KeyRing(privKey.privateKey);
-    // const keyring2 = new BCoin.KeyRing(key.derive(0).derive(0).privateKey);
     this.setState({ xpubkey: xpub, keyring: key });
     return {xpub: xpub, master: key};
-  }
-
-  async startNode() {
-    const { state } = this;
-    const config = {
-      hash: true,
-      network: state.network,
-      memory: false,
-      logConsole: true,
-      workers: true,
-      workerFile: '/~bitcoin/js/worker.js',
-      createSocket: (port, host) => {
-        return window.ProxySocket.connect(this.state.proxySocket, port, host);
-      },
-      logger: new window.Logger({
-        level: 'info',
-        console: true,
-      }),
-      // https://github.com/bcoin-org/bcoin/issues/935
-      // When running an SPV node with a wallet as a process there will be missing
-      // transactions from blocks.
-      // Solution: Run the SPV node and wallet in the same process as a plugin.
-      plugins: [BCoin.wallet.plugin],
-    }
-    if (state.peerSeeds) {
-      config.only = state.peerSeeds;
-    }
-    const spvNode = new BCoin.SPVNode(config);
-    const { wdb } = spvNode.require('walletdb');
-
-    await spvNode.ensure();
-    await spvNode.open();
-    await spvNode.connect();
-    spvNode.startSync();
-    const coinType = spvNode.network.keyPrefix.coinType;
-    const networkType = spvNode.network.type;
-    let xpub;
-    let master;
-    console.log(state);
-    if (state.seed) {
-      console.log("keyFromSeed");
-      const keys = this.keyFromSeed(coinType, networkType);
-      xpub = keys.xpub;
-      master = keys.master
-    }
-    else {
-      console.log("xpub loaded");
-      xpub = BCoin.HDPublicKey.fromBase58(state.xpubkey).xpubkey(networkType);
-    }
-    console.log(xpub);
-    const wallet = await wdb.ensure({
-      id: ship,
-      // master: master
-      accountKey: xpub,
-      watchOnly: true
-    });
-
-    const key1 = await wallet.createReceive(0);
-    console.log(key1.getAddress('string', spvNode.network.type));
-    // console.log(
-    //   key1.getAddress('string', spvNode.network.type),
-    //   "is this my address?",
-    //   wallet.hasAddress(key1),
-    //   wallet.getAccountByAddress(key1)
-    // );
-
-    const ak = BCoin.HDPublicKey.fromBase58(xpub);
-    const pk = ak.derive(0).derive(0);
-    const addr2 = new BCoin.KeyRing(pk);
-    const anAddr = BCoin.Address.fromBase58(
-      addr2.getAddress('base58', spvNode.network.type)
-    );
-    console.log(
-      anAddr,
-      "is this my address?",
-      await wallet.hasAddress(anAddr),
-      await wallet.getAccountByAddress(anAddr)
-    );
-    // Test
-
-
-
-    if (!state.hasXPub || state.seed) {
-      console.log("sending xpub");
-      api.add.xpubkey(xpub);
-    }
-
-    wallet.on('balance', balance => {
-      console.log('Balance updated:\n', balance.toJSON());
-      const nTX = balance.tx;
-      const coins = balance.coin;
-      this.setState({
-        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
-        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
-      });
-    });
-
-    spvNode.on('block', async block => { this.getInfo(); });
-    spvNode.on('block connect', async (block) => { this.getInfo(); });
-    spvNode.on('tx', async tx => {
-      console.log("new tx", tx);
-      await wdb.addTX(tx);
-      const balance = await wallet.getBalance();
-      const nTX = balance.tx;
-      const coins = balance.coin;
-      this.setState({
-        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
-        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
-      });
-    });
-    spvNode.pool.on('peer connect', () => { this.getInfo(); });
-    spvNode.pool.on('peer close', () => { this.getInfo(); });
-    spvNode.pool.on('peer open', () => { this.getInfo(); });
-    spvNode.pool.on('packet', () => { this.getInfo(); });
-
-    this.setState({
-      wallet: wallet,
-      node: spvNode,
-      wdb: wdb,
-      coinType: coinType
-    });
   }
 
   getInfo() {
@@ -264,7 +125,113 @@ export class Root extends Component {
       hash: node.chain.tip.rhash(),
       peers: peers
     });
+  }
 
+  async startNode() {
+    const { state } = this;
+    const config = {
+      hash: true,
+      network: state.network,
+      memory: false,
+      logConsole: true,
+      workers: true,
+      workerFile: '/~bitcoin/js/worker.js',
+      createSocket: (port, host) => {
+        return window.ProxySocket.connect(this.state.proxySocket, port, host);
+      },
+      logger: new window.Logger({
+        level: 'info',
+        console: true,
+      }),
+      // https://github.com/bcoin-org/bcoin/issues/935
+      // When running an SPV node with a wallet as a process there will be missing
+      // transactions from blocks.
+      // Solution: Run the SPV node and wallet in the same process as a plugin.
+      plugins: [BCoin.wallet.plugin],
+    }
+    if (state.peerSeeds) {
+      config.only = state.peerSeeds;
+    }
+    const spvNode = new BCoin.SPVNode(config);
+    const { wdb } = spvNode.require('walletdb');
+
+    await spvNode.ensure();
+    await spvNode.open();
+    await spvNode.connect();
+    spvNode.startSync();
+    const coinType = spvNode.network.keyPrefix.coinType;
+    const networkType = spvNode.network.type;
+    let xpub;
+    let master;
+    if (state.seed) {
+      const keys = this.keyFromSeed(coinType, networkType);
+      xpub = keys.xpub;
+      master = keys.master
+    }
+    else {
+      xpub = BCoin.HDPublicKey.fromBase58(state.xpubkey).xpubkey(networkType);
+    }
+    const wallet = await wdb.ensure({
+      id: ship,
+      // master: master
+      accountKey: xpub,
+      watchOnly: true
+    });
+
+    // Debugging
+    const ak = BCoin.HDPublicKey.fromBase58(xpub);
+    const pk = ak.derive(0).derive(0);
+    const addr2 = new BCoin.KeyRing(pk);
+    const anAddr = BCoin.Address.fromBase58(
+      addr2.getAddress('base58', spvNode.network.type)
+    );
+    console.log(
+      addr2.getAddress('base58', spvNode.network.type),
+      anAddr,
+      "is this my address?",
+      await wallet.hasAddress(anAddr),
+      await wallet.getAccountByAddress(anAddr)
+    );
+    // Test
+
+    if (!state.hasXPub || state.seed) {
+      console.log("sending xpub");
+      api.add.xpubkey(xpub);
+    }
+
+    wallet.on('balance', balance => {
+      console.log('Balance updated:\n', balance.toJSON());
+      const nTX = balance.tx;
+      const coins = balance.coin;
+      this.setState({
+        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
+        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
+      });
+    });
+
+    spvNode.on('block', async block => { this.getInfo(); });
+    spvNode.on('block connect', async (block) => { this.getInfo(); });
+    spvNode.on('tx', async tx => {
+      await wdb.addTX(tx);
+      const balance = await wallet.getBalance();
+      const nTX = balance.tx;
+      const coins = balance.coin;
+      this.setState({
+        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
+        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
+      });
+    });
+    spvNode.pool.on('peer connect', () => { this.getInfo(); });
+    spvNode.pool.on('peer close', () => { this.getInfo(); });
+    spvNode.pool.on('peer open', () => { this.getInfo(); });
+    spvNode.pool.on('packet', () => { this.getInfo(); });
+
+    this.setState({
+      wallet: wallet,
+      node: spvNode,
+      wdb: wdb,
+      coinType: coinType
+    });
   }
 
   render() {
@@ -278,48 +245,46 @@ export class Root extends Component {
       : "pointer db f9 mt3 gray2 ba bg-gray0-d pa2 pv3 ph4 b--gray3";
 
     return (
-      React.createElement(BrowserRouter, {__self: this, __source: {fileName: _jsxFileName, lineNumber: 281}}
-        , React.createElement('div', { className: "absolute h-100 w-100 bg-gray0-d ph4-m ph4-l ph4-xl pb4-m pb4-l pb4-xl"         , __self: this, __source: {fileName: _jsxFileName, lineNumber: 282}}
-          , React.createElement(HeaderBar, {__self: this, __source: {fileName: _jsxFileName, lineNumber: 283}})
+      React.createElement(BrowserRouter, {__self: this, __source: {fileName: _jsxFileName, lineNumber: 248}}
+        , React.createElement('div', { className: "absolute h-100 w-100 bg-gray0-d ph4-m ph4-l ph4-xl pb4-m pb4-l pb4-xl"         , __self: this, __source: {fileName: _jsxFileName, lineNumber: 249}}
+          , React.createElement(HeaderBar, {__self: this, __source: {fileName: _jsxFileName, lineNumber: 250}})
           , React.createElement(Route, { exact: true, path: "/~bitcoin", render:  () => {
             return (
-              React.createElement('div', { className: "cf w-100 flex flex-column pa4 ba-m ba-l ba-xl b--gray2 br1 h-100 h-100-minus-40-m h-100-minus-40-l h-100-minus-40-xl f9 white-d"               , __self: this, __source: {fileName: _jsxFileName, lineNumber: 286}}
-                , React.createElement('h1', { className: "mb3 f8" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 287}}, "Bitcoin")
-                , React.createElement('div', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 288}}
+              React.createElement('div', { className: "cf w-100 flex flex-column pa4 ba-m ba-l ba-xl b--gray2 br1 h-100 h-100-minus-40-m h-100-minus-40-l h-100-minus-40-xl f9 white-d"               , __self: this, __source: {fileName: _jsxFileName, lineNumber: 253}}
+                , React.createElement('h1', { className: "mb3 f8" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 254}}, "Bitcoin")
+                , React.createElement('div', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 255}}
                   , React.createElement('div', { className: "cf w-20 fl pa2 overflow-x-hidden " +
-                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 289}}
+                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 256}}
                     , React.createElement('button', {
                       onClick: this.startNode,
-                      className: createClasses, __self: this, __source: {fileName: _jsxFileName, lineNumber: 291}}, "Start Node Sync"
+                      className: createClasses, __self: this, __source: {fileName: _jsxFileName, lineNumber: 258}}, "Start Node Sync"
 
                     )
                   )
                   , React.createElement('div', { className: "cf w-60 fl pa2 pt4 overflow-x-hidden " +
-                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 297}}
-                    , React.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 299}}, "Current Height: "
+                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 264}}
+                    , React.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 266}}, "Current Height: "
                         , state.height
                     )
-                    , React.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 302}}, "Current Hash: "
+                    , React.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 269}}, "Current Hash: "
                         , state.hash
                     )
-
-
                     ,  ProgressBar(( (state.progress) ? state.progress : 0) )
                   )
-                  , React.createElement('div', { className: "cf w-20 fl pa2 pt4 overflow-x-hidden bg-gray0-d white-d flex flex-column"         , __self: this, __source: {fileName: _jsxFileName, lineNumber: 309}}
-                    , React.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 310}}, "Balance: "
+                  , React.createElement('div', { className: "cf w-20 fl pa2 pt4 overflow-x-hidden bg-gray0-d white-d flex flex-column"         , __self: this, __source: {fileName: _jsxFileName, lineNumber: 274}}
+                    , React.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 275}}, "Balance: "
                        , confirmed
                     )
-                    , React.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 313}}, "Pending: "
+                    , React.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 278}}, "Pending: "
                        , Math.abs(confirmed - unconfirmed)
                     )
                   )
                 )
-                , React.createElement('div', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 318}}
+                , React.createElement('div', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 283}}
                   , React.createElement('div', { className: "cf w-50 fl pa2 pt4 overflow-x-hidden " +
-                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 319}}
-                    , React.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName, lineNumber: 321}}
-                      , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 322}}, "Mnemonic seed" )
+                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 284}}
+                    , React.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName, lineNumber: 286}}
+                      , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 287}}, "Mnemonic seed" )
                       , React.createElement('textarea', {
                         className: 
                           "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -332,10 +297,10 @@ export class Root extends Component {
                           height: 48,
                           paddingTop: 14
                         },
-                        onChange: this.loadMnemonic, __self: this, __source: {fileName: _jsxFileName, lineNumber: 323}}
+                        onChange: this.loadMnemonic, __self: this, __source: {fileName: _jsxFileName, lineNumber: 288}}
                       )
-                      , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 337}}, "Extended Public Key"  )
-                          , React.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 338}}
+                      , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 302}}, "Extended Public Key"  )
+                          , React.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 303}}
                             , React.createElement('textarea', {
                               className: 
                                 "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -347,19 +312,19 @@ export class Root extends Component {
                                 resize: "none",
                                 height: 48,
                                 paddingTop: 14
-                              }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 339}}
+                              }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 304}}
                             )
                           )
                       , React.createElement(ConnectLedger, {
                         loadXPubKey: this.loadFromLedger,
-                        network: state.network, __self: this, __source: {fileName: _jsxFileName, lineNumber: 353}}
+                        network: state.network, __self: this, __source: {fileName: _jsxFileName, lineNumber: 318}}
                       )
                     )
                   )
 
                   , React.createElement('div', { className: "w-50 fl pa2 pt4 overflow-x-hidden " +
-                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 360}}
-                    , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 362}}, "Proxy Socket URL"  )
+                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 325}}
+                    , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 327}}, "Proxy Socket URL"  )
                     , React.createElement('textarea', {
                       className: 
                         "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -372,9 +337,9 @@ export class Root extends Component {
                         height: 48,
                         paddingTop: 14
                       },
-                      onChange: this.loadSocket, __self: this, __source: {fileName: _jsxFileName, lineNumber: 363}}
+                      onChange: this.loadSocket, __self: this, __source: {fileName: _jsxFileName, lineNumber: 328}}
                     )
-                    , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 377}}, "Trusted Peer Nodes"  )
+                    , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 342}}, "Trusted Peer Nodes"  )
                     , React.createElement('textarea', {
                       className: 
                         "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -387,9 +352,9 @@ export class Root extends Component {
                         height: 48,
                         paddingTop: 14
                       },
-                      onChange: this.loadTrustedPeers, __self: this, __source: {fileName: _jsxFileName, lineNumber: 378}}
+                      onChange: this.loadTrustedPeers, __self: this, __source: {fileName: _jsxFileName, lineNumber: 343}}
                     )
-                    , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 392}}, "Network")
+                    , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 357}}, "Network")
                     , React.createElement('textarea', {
                       className: 
                         "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -402,26 +367,26 @@ export class Root extends Component {
                         height: 48,
                         paddingTop: 14
                       },
-                      onChange: this.selectNetwork, __self: this, __source: {fileName: _jsxFileName, lineNumber: 393}}
+                      onChange: this.selectNetwork, __self: this, __source: {fileName: _jsxFileName, lineNumber: 358}}
                     )
                   )
 
                   , React.createElement('div', { className: "w-50 fl pa2 overflow-x-hidden " +
-                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 409}}
+                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 374}}
 
-                    , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 412}}, "Peer Nodes" )
+                    , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 377}}, "Peer Nodes" )
                     , React.createElement('div', { className: 
                         "f7 ba b--gray3 b--gray2-d bg-gray0-d white-d pa1 db w-100 mt2 " +
                         "focus-b--black focus-b--white-d"
-                      , __self: this, __source: {fileName: _jsxFileName, lineNumber: 413}}
-                      , React.createElement('div', { className: "dt dt--fixed f8 lh-copy db fw4"     , __self: this, __source: {fileName: _jsxFileName, lineNumber: 417}}
-                        , React.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName, lineNumber: 418}}, "Host"
+                      , __self: this, __source: {fileName: _jsxFileName, lineNumber: 378}}
+                      , React.createElement('div', { className: "dt dt--fixed f8 lh-copy db fw4"     , __self: this, __source: {fileName: _jsxFileName, lineNumber: 382}}
+                        , React.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName, lineNumber: 383}}, "Host"
 
                         )
-                        , React.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName, lineNumber: 421}}, "Agent"
+                        , React.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName, lineNumber: 386}}, "Agent"
 
                         )
-                        , React.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName, lineNumber: 424}}, "Bytes (↑↓)"
+                        , React.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName, lineNumber: 389}}, "Bytes (↑↓)"
 
                         )
                       )
@@ -430,14 +395,14 @@ export class Root extends Component {
                         const subver = peer.subver;
                         const bytes = `${peer.bytessent}/${peer.bytesrecv}`;
                         return (
-                          React.createElement('div', { key: index, className: "f9 dt dt--fixed"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 433}}
-                            , React.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName, lineNumber: 434}}
+                          React.createElement('div', { key: index, className: "f9 dt dt--fixed"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 398}}
+                            , React.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName, lineNumber: 399}}
                               , addr
                             )
-                            , React.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName, lineNumber: 437}}
+                            , React.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName, lineNumber: 402}}
                               , subver
                             )
-                            , React.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName, lineNumber: 440}}
+                            , React.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName, lineNumber: 405}}
                               , bytes
                             )
                           )
@@ -447,12 +412,12 @@ export class Root extends Component {
                   )
 
                   , React.createElement('div', { className: "w-50 fl pa2 overflow-x-hidden " +
-                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 449}}
-                      , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 451}}, "Payments"
+                                  "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName, lineNumber: 414}}
+                      , React.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName, lineNumber: 416}}, "Payments"
 
                       )
-                    , React.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName, lineNumber: 454}}
-                      , React.createElement('div', { className: "fl", __self: this, __source: {fileName: _jsxFileName, lineNumber: 455}}
+                    , React.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName, lineNumber: 419}}
+                      , React.createElement('div', { className: "fl", __self: this, __source: {fileName: _jsxFileName, lineNumber: 420}}
                         , React.createElement(BitcoinTransaction, {
                           amount: state.amount,
                           point: state.point,
@@ -464,10 +429,10 @@ export class Root extends Component {
                           wdb: state.wdb,
                           keyring: state.keyring,
                           account: state.account,
-                          coinType: state.coinType, __self: this, __source: {fileName: _jsxFileName, lineNumber: 456}}
+                          coinType: state.coinType, __self: this, __source: {fileName: _jsxFileName, lineNumber: 421}}
                           )
                       )
-                      , React.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 470}}
+                      , React.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 435}}
                         , React.createElement('textarea', {
                           className: 
                             "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -480,10 +445,10 @@ export class Root extends Component {
                             height: 48,
                             paddingTop: 14
                           },
-                          onChange: this.setPoint, __self: this, __source: {fileName: _jsxFileName, lineNumber: 471}}
+                          onChange: this.setPoint, __self: this, __source: {fileName: _jsxFileName, lineNumber: 436}}
                         )
                       )
-                      , React.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 486}}
+                      , React.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 451}}
                         , React.createElement('textarea', {
                           className: 
                             "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -496,7 +461,7 @@ export class Root extends Component {
                             height: 48,
                             paddingTop: 14
                           },
-                          onChange: this.setAmount, __self: this, __source: {fileName: _jsxFileName, lineNumber: 487}}
+                          onChange: this.setAmount, __self: this, __source: {fileName: _jsxFileName, lineNumber: 452}}
                         )
                       )
                     )
@@ -504,7 +469,7 @@ export class Root extends Component {
                 )
             )
             )
-          }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 284}}
+          }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 251}}
           )
         )
       )

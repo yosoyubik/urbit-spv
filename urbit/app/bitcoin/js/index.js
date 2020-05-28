@@ -62048,11 +62048,9 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
 
               async deriveXPubKey(account) {
                 const device = await this.connectLedger();
-                console.log('Getting pk..');
                 const coinType = (this.network === 'main') ? 0 : 1;
                 const path = `m/44'/${coinType}'/${account}'`;
                 const pubkey = await this.manager.getPublicKey(path);
-                console.log('Public Key: ', pubkey.xpubkey(this.network));
                 // props.loadXPubKey(pubkey.xpubkey(this.network), path, account);
                 await device.close();
                 await this.manager.close();
@@ -62064,40 +62062,9 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
               }
 
               async signTransaction(mtx, inputData) {
-                console.log("signTransaction");
                 const device = await this.connectLedger();
-                console.log("connected");
-                console.log("mtx", mtx, mtx.mutable);
                 const smtx = await this.manager.signTransaction(mtx.toTX(), inputData);
 
-                // const inputDataMap = new BufferMap();
-                // for (let data of inputData) {
-                //   const prevTX = data.prevTX;
-                //   console.log("signTransaction", BCoin.TX.isTX(data.prevTX));
-                //   if (!BInputData.isInputData(data))
-                //     data = BInputData.fromOptions(data);
-                //   const key = data.toKey();
-                //   data.prevTX = prevTX;
-                //   inputDataMap.set(key, data);
-                // };
-                //
-                // const ledgerInputs = createLedgerInputs(
-                //   tx,
-                //   inputDataMap,
-                //   network
-                // );
-                //
-                // const mtx = BCoin.MTX.fromTX(tx);
-                //
-                // // add coins to the view.
-                // for (const data of inputDataMap.values())
-                //   mtx.view.addCoin(data.coin);
-                //
-                // await this.manager.ledgerApp.signTransaction(mtx, ledgerInputs);
-                //
-                // const signedMtx = applyOtherSignatures(mtx, inputDataMap, network);
-                //
-                // console.log("signed");
                 await device.close();
                 await this.manager.close();
                 return smtx;
@@ -62168,86 +62135,42 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                     address: address.toString(node.network),
                   }],
                 });
-                console.log("address1", address);
-                console.log("address2", address.toString(node.network));
-                console.log("MTX address");
-                mtx.getAddresses().forEach((item, i) => {
-                  console.log(item.toBase58(node.network));
-                });
-                console.log("MTX Input address");
-                mtx.getInputAddresses().forEach((item, i) => {
-                  console.log(item.toBase58(node.network));
-                });
-                console.log("MTX Output address");
-                mtx.getOutputAddresses().forEach((item, i) => {
-                  console.log(item.toBase58(node.network));
-                });
-                console.log("outputs", mtx.outputs);
-                console.log("mtx", mtx, mtx.mutable);
                 const inputs = await wallet.getInputPaths(mtx);
-                console.log(inputs);
                 if (keyring) {
-                  console.log('seed signing2');
                   const rings = [];
                   for (const input of inputs) {
                     const ring = new BCoin.wallet.WalletKey(
                       keyring.derive(input.branch).derive(input.index).privateKey);
-                    console.log(ring);
                     if (ring)
                       rings.push(ring);
                   }
                   // Signing
                   mtx.sign(rings);
                 } else {
-                  console.log('ledger signing');
                   const inputData = [];
-                  console.log(mtx.inputs);
                   // From: https://github.com/bcoin-org/bsigner/blob/e8c9b80ee9559b3b32f16ff5c3d9f5d23b7b921c/test/utils/common.js#L83
                   for (const input of mtx.inputs) {
-                      console.log("input", input);
                       const data = {};
-                      // console.log(TX.isTX(input.tx));
                       const prevhash = input.prevout.hash;
                       const txRecord = await wallet.getTX(prevhash);
                       data.prevTX = BCoin.TX.fromOptions(txRecord.tx);
-                      console.log(txRecord);
                       const coin = mtx.view.getCoinFor(input);
                       const path = Path.fromList([44, coinType, account], true);
                       const base = path.clone();
-
-                      console.log('prevTX', BCoin.TX.isTX(data.prevTX));
-                      // const coin = mtx.view.getCoinFor(input);
-                      // const coin = await wallet.getCoin(prevhash, input.prevout.index);
-                      // const prevout = BCoin.Outpoint.fromOptions({
-                      //   hash: coin.hash,
-                      //   index: coin.index
-                      // });
-                      // data.prevout = prevout;
-                      // const coin = await wallet.getCoin(prevhash, input.prevout.index);
                       const address = coin.getAddress();
                       const addressPath = await wallet.getPath(address.getHash());
                       data.path = base.push(addressPath.branch).push(addressPath.index);
                       // This will fail with Nested addresses.
                       data.witness = input.type === BCoin.Address.types.WITNESS;
                       data.coin = coin;
-
-                      console.log("stil?", BCoin.TX.isTX(data.prevTX));
                       inputData.push(data);
-                      console.log(data);
                   }
-                  console.log("mtx", mtx, mtx.mutable);
-                  console.log("manager.signTransaction");
                   // Signing
                   mtx = await this.state.manager.signTransaction(mtx, inputData);
-                  console.log("onto verify!");
                 }
                 // The transaction should now verify.
                 if (mtx.verify()) {
-                  console.log("verifiyed!");
                   let tx = mtx.toTX();
-                  // We need to announce by hand since
-                  // spv nodes are always selfish
-                  console.log("sending...", BCoin.TX.isTX(tx));
                   if (!BCoin.TX.isTX(tx)) {
                     tx = BCoin.TX.fromOptions({
                       version: tx.version,
@@ -62255,66 +62178,14 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                       outputs: tx.outputs,
                       locktime: tx.locktime
                     });
-                    console.log(BCoin.TX.isTX("now?", tx));
                   }
                   const ans = await node.sendTX(tx);
-                  console.log("adding...", ans);
                   await wdb.addTX(tx);
                   const balance = await wallet.getBalance();
-                  console.log(balance);
                 } else {
                   console.log("ERROR tx won't verify...", mtx, keyring);
                 }
-                // setConfirmedBalance(BCoin.Amount.btc(balance.confirmed));
-                // setUnconfirmedBalance(BCoin.Amount.btc(balance.unconfirmed));
               }
-
-              // startBitcoinTransaction () {
-              //
-              //   if (this.state.status === STATE.INIT) {
-              //
-              //   }
-
-
-              //   this.setState({
-              //     error: false,
-              //     awaitingAddres: true
-              //   }, () => {
-              //     api.request.address(event.target.value)
-              //       .then(() => {
-              //       this.setState({awaitingAddres: false});
-              //     })
-              //   });
-              //
-              //   const address = Address.fromString('mn13AG6EAWvwAH59KdcWJU8iJkpccvBTpG');
-              //   console.log(address, amount);
-              //   const mtx = await this.state.wallet.createTX({
-              //     outputs: [
-              //       {
-              //         value: BCoin.Amount.value(this.state.amount),
-              //         address: address.toString(this.state.node.network),
-              //       },
-              //     ],
-              //   });
-              //   await this.state.wallet.sign(mtx);
-              //   const tx = mtx.toTX();
-              //   // We need to announce by hand since
-              //   // spv nodes are always selfish
-              //   this.state.node.relay(tx);
-              //
-              //   // We add the tx to our own wallet to see the UI updated.
-              //   // In main net we wouldn't get a guarantee that
-              //   //  the tx has been added.
-              //   await this.state.wdb.addTX(tx);
-              //
-              //   const balance = await this.state.wallet.getBalance();
-              //   console.log(balance);
-              //   this.setState({
-              //     confirmedBalance: BCoin.Amount.btc(balance.confirmed),
-              //     unconfirmedBalance: BCoin.Amount.btc(balance.unconfirmed),
-              //     sent: true
-              //   });
-              // }
 
               render() {
                 const { props, state, buttonMessage, requestAddress, sendBTCTransaction } = this;
@@ -62334,7 +62205,7 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                   react.createElement(react.Fragment, null
                     ,  isDefaultState ? (
                         react.createElement('button', {
-                          className: createClasses, __self: this, __source: {fileName: _jsxFileName$4, lineNumber: 234}}
+                          className: createClasses, __self: this, __source: {fileName: _jsxFileName$4, lineNumber: 138}}
                           ,  buttonMessage(STATE.INIT, props.amount, props.point) 
                         )
                     ): null
@@ -62342,7 +62213,7 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                     ,  (isValidPoint && !isReady) ? (
                         react.createElement('button', {
                           onClick: requestAddress,
-                          className: createClasses, __self: this, __source: {fileName: _jsxFileName$4, lineNumber: 241}}
+                          className: createClasses, __self: this, __source: {fileName: _jsxFileName$4, lineNumber: 145}}
                           ,  buttonMessage(STATE.POINT, props.amount, props.point) 
                         )
                     ) : null
@@ -62350,7 +62221,7 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                     ,  isReady ? (
                         react.createElement('button', {
                           onClick: sendBTCTransaction,
-                          className: createClasses, __self: this, __source: {fileName: _jsxFileName$4, lineNumber: 249}}
+                          className: createClasses, __self: this, __source: {fileName: _jsxFileName$4, lineNumber: 153}}
                           ,  buttonMessage(STATE.READY, props.amount, props.point) 
                         )
                     ): null
@@ -62396,73 +62267,23 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                 this.setState({account: event.target.value});
               }
 
-              // async connectLedger() {
-              //   const { props, state } = this;
-              //   console.log(props, state);
-              //   if (state.connected || state.account === undefined)
-              //     return;
-              //   console.log("mounting", state.manager);
-              //   console.log("opening", usb);
-              //   await state.manager.open();
-              //   console.log(state.manager);
-              //   const device = await state.manager.selectDevice();
-              //   console.log(device);
-              //   return device;
-              //   // // this.setState({ device: device });
-              //   // // this.renderManager();
-              //   await device.open();
-              //
-              //   this.setState({ connected: true });
-              //   // await state.manager.close();
-              // }
-              //
-              // deriveXPubKey() {
-              //   const device = this.connectLedger();
-              //   console.log('Getting pk..');
-              //   const coinType = (props.network === 'main') ? 0 : 1;
-              //   const path = `m/44'/${coinType}'/${state.account}'`;
-              //   const pubkey = await state.manager.getPublicKey(path);
-              //   console.log('Public Key: ', pubkey.xpubkey(props.network));
-              //   props.loadXPubKey(pubkey.xpubkey(props.network), path, state.account);
-              //   this.setState({ connected: false });
-              //   await device.close();
-              //   await state.manager.close();
-              // }
-              //
-              // async signTransaction(mtx, inputData) {
-              //   const { state } = this;
-              //   const device = this.connectLedger();
-              //   mtx = await state.manager.signTransaction(mtx, inputData);
-              //   await device.close();
-              //   await state.manager.close();
-              //   this.setState({ connected: false });
-              //   return mtx
-              // }
-              //
-              // deriveAddress(hd, change, index, network) {
-              //   const pubkey = hd.derive(change).derive(index);
-              //   const keyring = BCoin.KeyRing.fromPublic(pubkey.publicKey, network);
-              //
-              //   return keyring.getAddress().toString();
-              // }
-
               render() {
                 const { props, state, deriveXPubKey } = this;
                 let createClasses = !state.connected
                   ? "pointer db f9 mt2 green2 bg-gray0-d ba pv4 ph2 b--green2"
                   : "pointer db f9 mt2 gray2 ba bg-gray0-d pv4 ph2 b--gray3";
                 return (
-                  react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$5, lineNumber: 100}}
-                    , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 101}}, "Ledger")
-                    , react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$5, lineNumber: 102}}
-                     , react.createElement('div', { className: "cf w-30 fl pr2 overflow-x-hidden bg-gray0-d white-d flex flex-column"        , __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 103}}
+                  react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$5, lineNumber: 50}}
+                    , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 51}}, "Ledger")
+                    , react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$5, lineNumber: 52}}
+                     , react.createElement('div', { className: "cf w-30 fl pr2 overflow-x-hidden bg-gray0-d white-d flex flex-column"        , __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 53}}
                         , react.createElement('button', {
                           onClick: deriveXPubKey,
-                          className: createClasses, __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 104}}
+                          className: createClasses, __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 54}}
                           ,  (state.connected) ? "Generating key": "Connect"
                         )
                       )
-                      , react.createElement('div', { className: "cf w-70 fl pr2 overflow-x-hidden bg-gray0-d white-d flex flex-column"        , __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 110}}
+                      , react.createElement('div', { className: "cf w-70 fl pr2 overflow-x-hidden bg-gray0-d white-d flex flex-column"        , __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 60}}
                         , react.createElement('textarea', {
                           className: 
                             "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62475,7 +62296,7 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                             height: 48,
                             paddingTop: 10
                           },
-                          onChange: this.setLedgerAccount, __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 111}}
+                          onChange: this.setLedgerAccount, __self: this, __source: {fileName: _jsxFileName$5, lineNumber: 61}}
                         )
                       )
                     )
@@ -62501,18 +62322,7 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                 this.state.peerSeeds = ['127.0.0.1:48444'];
                 this.state.network = 'regtest';
                 this.state.account = 0;
-                // this.state.unConfirmedBalance = 0.0;
-                // this.state.confirmedBalance = 0.0;
-                //  FIXME: remove!
-                //
-                // this.state.amount = '0.2' ;
-                // this.state.point = "~sen";
-                // this.state.address = 'mpW3iVi2Td1vqDK8Nfie29ddZXf9spmZkX';
-                // this.state.amount = 0.0;
-                // this.state.point = null;
                 this.state.sent = false;
-                // this.state.address = '';
-                // this.state.point = '';
 
                 store.setStateHandler(this.setState.bind(this));
 
@@ -62544,10 +62354,6 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
               }
 
               loadSocket(event) {
-                // const proto = 'ws';
-                // const proxy = '127.0.0.1';
-                // const proxyPort = 9090;
-                // `${proto}://${proxy}:${proxyPort}`,
                 this.setState({proxySocket: event.target.value});
               }
 
@@ -62566,132 +62372,8 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                 //  Account 0 is sent to the %bitcoin app for address derivation
                 const key = privKey.derivePath(`m/44'/${coinType}'/${this.state.account}'`);
                 const xpub = key.xpubkey(network);
-
-                // const keyring = new BCoin.KeyRing(privKey.privateKey);
-                // const keyring2 = new BCoin.KeyRing(key.derive(0).derive(0).privateKey);
                 this.setState({ xpubkey: xpub, keyring: key });
                 return {xpub: xpub, master: key};
-              }
-
-              async startNode() {
-                const { state } = this;
-                const config = {
-                  hash: true,
-                  network: state.network,
-                  memory: false,
-                  logConsole: true,
-                  workers: true,
-                  workerFile: '/~bitcoin/js/worker.js',
-                  createSocket: (port, host) => {
-                    return window.ProxySocket.connect(this.state.proxySocket, port, host);
-                  },
-                  logger: new window.Logger({
-                    level: 'info',
-                    console: true,
-                  }),
-                  // https://github.com/bcoin-org/bcoin/issues/935
-                  // When running an SPV node with a wallet as a process there will be missing
-                  // transactions from blocks.
-                  // Solution: Run the SPV node and wallet in the same process as a plugin.
-                  plugins: [BCoin$1.wallet.plugin],
-                };
-                if (state.peerSeeds) {
-                  config.only = state.peerSeeds;
-                }
-                const spvNode = new BCoin$1.SPVNode(config);
-                const { wdb } = spvNode.require('walletdb');
-
-                await spvNode.ensure();
-                await spvNode.open();
-                await spvNode.connect();
-                spvNode.startSync();
-                const coinType = spvNode.network.keyPrefix.coinType;
-                const networkType = spvNode.network.type;
-                let xpub;
-                let master;
-                console.log(state);
-                if (state.seed) {
-                  console.log("keyFromSeed");
-                  const keys = this.keyFromSeed(coinType, networkType);
-                  xpub = keys.xpub;
-                  master = keys.master;
-                }
-                else {
-                  console.log("xpub loaded");
-                  xpub = BCoin$1.HDPublicKey.fromBase58(state.xpubkey).xpubkey(networkType);
-                }
-                console.log(xpub);
-                const wallet = await wdb.ensure({
-                  id: ship,
-                  // master: master
-                  accountKey: xpub,
-                  watchOnly: true
-                });
-
-                const key1 = await wallet.createReceive(0);
-                console.log(key1.getAddress('string', spvNode.network.type));
-                // console.log(
-                //   key1.getAddress('string', spvNode.network.type),
-                //   "is this my address?",
-                //   wallet.hasAddress(key1),
-                //   wallet.getAccountByAddress(key1)
-                // );
-
-                const ak = BCoin$1.HDPublicKey.fromBase58(xpub);
-                const pk = ak.derive(0).derive(0);
-                const addr2 = new BCoin$1.KeyRing(pk);
-                const anAddr = BCoin$1.Address.fromBase58(
-                  addr2.getAddress('base58', spvNode.network.type)
-                );
-                console.log(
-                  anAddr,
-                  "is this my address?",
-                  await wallet.hasAddress(anAddr),
-                  await wallet.getAccountByAddress(anAddr)
-                );
-                // Test
-
-
-
-                if (!state.hasXPub || state.seed) {
-                  console.log("sending xpub");
-                  api$1.add.xpubkey(xpub);
-                }
-
-                wallet.on('balance', balance => {
-                  console.log('Balance updated:\n', balance.toJSON());
-                  const nTX = balance.tx;
-                  const coins = balance.coin;
-                  this.setState({
-                    unConfirmedBalance: BCoin$1.Amount.btc(balance.confirmed),
-                    confirmedBalance: BCoin$1.Amount.btc(balance.unconfirmed)
-                  });
-                });
-
-                spvNode.on('block', async block => { this.getInfo(); });
-                spvNode.on('block connect', async (block) => { this.getInfo(); });
-                spvNode.on('tx', async tx => {
-                  console.log("new tx", tx);
-                  await wdb.addTX(tx);
-                  const balance = await wallet.getBalance();
-                  const nTX = balance.tx;
-                  const coins = balance.coin;
-                  this.setState({
-                    unConfirmedBalance: BCoin$1.Amount.btc(balance.confirmed),
-                    confirmedBalance: BCoin$1.Amount.btc(balance.unconfirmed)
-                  });
-                });
-                spvNode.pool.on('peer connect', () => { this.getInfo(); });
-                spvNode.pool.on('peer close', () => { this.getInfo(); });
-                spvNode.pool.on('peer open', () => { this.getInfo(); });
-                spvNode.pool.on('packet', () => { this.getInfo(); });
-
-                this.setState({
-                  wallet: wallet,
-                  node: spvNode,
-                  wdb: wdb,
-                  coinType: coinType
-                });
               }
 
               getInfo() {
@@ -62739,7 +62421,113 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                   hash: node.chain.tip.rhash(),
                   peers: peers
                 });
+              }
 
+              async startNode() {
+                const { state } = this;
+                const config = {
+                  hash: true,
+                  network: state.network,
+                  memory: false,
+                  logConsole: true,
+                  workers: true,
+                  workerFile: '/~bitcoin/js/worker.js',
+                  createSocket: (port, host) => {
+                    return window.ProxySocket.connect(this.state.proxySocket, port, host);
+                  },
+                  logger: new window.Logger({
+                    level: 'info',
+                    console: true,
+                  }),
+                  // https://github.com/bcoin-org/bcoin/issues/935
+                  // When running an SPV node with a wallet as a process there will be missing
+                  // transactions from blocks.
+                  // Solution: Run the SPV node and wallet in the same process as a plugin.
+                  plugins: [BCoin$1.wallet.plugin],
+                };
+                if (state.peerSeeds) {
+                  config.only = state.peerSeeds;
+                }
+                const spvNode = new BCoin$1.SPVNode(config);
+                const { wdb } = spvNode.require('walletdb');
+
+                await spvNode.ensure();
+                await spvNode.open();
+                await spvNode.connect();
+                spvNode.startSync();
+                const coinType = spvNode.network.keyPrefix.coinType;
+                const networkType = spvNode.network.type;
+                let xpub;
+                let master;
+                if (state.seed) {
+                  const keys = this.keyFromSeed(coinType, networkType);
+                  xpub = keys.xpub;
+                  master = keys.master;
+                }
+                else {
+                  xpub = BCoin$1.HDPublicKey.fromBase58(state.xpubkey).xpubkey(networkType);
+                }
+                const wallet = await wdb.ensure({
+                  id: ship,
+                  // master: master
+                  accountKey: xpub,
+                  watchOnly: true
+                });
+
+                // Debugging
+                const ak = BCoin$1.HDPublicKey.fromBase58(xpub);
+                const pk = ak.derive(0).derive(0);
+                const addr2 = new BCoin$1.KeyRing(pk);
+                const anAddr = BCoin$1.Address.fromBase58(
+                  addr2.getAddress('base58', spvNode.network.type)
+                );
+                console.log(
+                  addr2.getAddress('base58', spvNode.network.type),
+                  anAddr,
+                  "is this my address?",
+                  await wallet.hasAddress(anAddr),
+                  await wallet.getAccountByAddress(anAddr)
+                );
+                // Test
+
+                if (!state.hasXPub || state.seed) {
+                  console.log("sending xpub");
+                  api$1.add.xpubkey(xpub);
+                }
+
+                wallet.on('balance', balance => {
+                  console.log('Balance updated:\n', balance.toJSON());
+                  const nTX = balance.tx;
+                  const coins = balance.coin;
+                  this.setState({
+                    unConfirmedBalance: BCoin$1.Amount.btc(balance.confirmed),
+                    confirmedBalance: BCoin$1.Amount.btc(balance.unconfirmed)
+                  });
+                });
+
+                spvNode.on('block', async block => { this.getInfo(); });
+                spvNode.on('block connect', async (block) => { this.getInfo(); });
+                spvNode.on('tx', async tx => {
+                  await wdb.addTX(tx);
+                  const balance = await wallet.getBalance();
+                  const nTX = balance.tx;
+                  const coins = balance.coin;
+                  this.setState({
+                    unConfirmedBalance: BCoin$1.Amount.btc(balance.confirmed),
+                    confirmedBalance: BCoin$1.Amount.btc(balance.unconfirmed)
+                  });
+                });
+                spvNode.pool.on('peer connect', () => { this.getInfo(); });
+                spvNode.pool.on('peer close', () => { this.getInfo(); });
+                spvNode.pool.on('peer open', () => { this.getInfo(); });
+                spvNode.pool.on('packet', () => { this.getInfo(); });
+
+                this.setState({
+                  wallet: wallet,
+                  node: spvNode,
+                  wdb: wdb,
+                  coinType: coinType
+                });
               }
 
               render() {
@@ -62753,48 +62541,46 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                   : "pointer db f9 mt3 gray2 ba bg-gray0-d pa2 pv3 ph4 b--gray3";
 
                 return (
-                  react.createElement(BrowserRouter, {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 281}}
-                    , react.createElement('div', { className: "absolute h-100 w-100 bg-gray0-d ph4-m ph4-l ph4-xl pb4-m pb4-l pb4-xl"         , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 282}}
-                      , react.createElement(HeaderBar, {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 283}})
+                  react.createElement(BrowserRouter, {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 248}}
+                    , react.createElement('div', { className: "absolute h-100 w-100 bg-gray0-d ph4-m ph4-l ph4-xl pb4-m pb4-l pb4-xl"         , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 249}}
+                      , react.createElement(HeaderBar, {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 250}})
                       , react.createElement(Route, { exact: true, path: "/~bitcoin", render:  () => {
                         return (
-                          react.createElement('div', { className: "cf w-100 flex flex-column pa4 ba-m ba-l ba-xl b--gray2 br1 h-100 h-100-minus-40-m h-100-minus-40-l h-100-minus-40-xl f9 white-d"               , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 286}}
-                            , react.createElement('h1', { className: "mb3 f8" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 287}}, "Bitcoin")
-                            , react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 288}}
+                          react.createElement('div', { className: "cf w-100 flex flex-column pa4 ba-m ba-l ba-xl b--gray2 br1 h-100 h-100-minus-40-m h-100-minus-40-l h-100-minus-40-xl f9 white-d"               , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 253}}
+                            , react.createElement('h1', { className: "mb3 f8" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 254}}, "Bitcoin")
+                            , react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 255}}
                               , react.createElement('div', { className: "cf w-20 fl pa2 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 289}}
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 256}}
                                 , react.createElement('button', {
                                   onClick: this.startNode,
-                                  className: createClasses, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 291}}, "Start Node Sync"
+                                  className: createClasses, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 258}}, "Start Node Sync"
 
                                 )
                               )
                               , react.createElement('div', { className: "cf w-60 fl pa2 pt4 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 297}}
-                                , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 299}}, "Current Height: "
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 264}}
+                                , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 266}}, "Current Height: "
                                     , state.height
                                 )
-                                , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 302}}, "Current Hash: "
+                                , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 269}}, "Current Hash: "
                                     , state.hash
                                 )
-
-
                                 ,  ProgressBar(( (state.progress) ? state.progress : 0) )
                               )
-                              , react.createElement('div', { className: "cf w-20 fl pa2 pt4 overflow-x-hidden bg-gray0-d white-d flex flex-column"         , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 309}}
-                                , react.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 310}}, "Balance: "
+                              , react.createElement('div', { className: "cf w-20 fl pa2 pt4 overflow-x-hidden bg-gray0-d white-d flex flex-column"         , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 274}}
+                                , react.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 275}}, "Balance: "
                                    , confirmed
                                 )
-                                , react.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 313}}, "Pending: "
+                                , react.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 278}}, "Pending: "
                                    , Math.abs(confirmed - unconfirmed)
                                 )
                               )
                             )
-                            , react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 318}}
+                            , react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 283}}
                               , react.createElement('div', { className: "cf w-50 fl pa2 pt4 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 319}}
-                                , react.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 321}}
-                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 322}}, "Mnemonic seed" )
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 284}}
+                                , react.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 286}}
+                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 287}}, "Mnemonic seed" )
                                   , react.createElement('textarea', {
                                     className: 
                                       "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62807,10 +62593,10 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                       height: 48,
                                       paddingTop: 14
                                     },
-                                    onChange: this.loadMnemonic, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 323}}
+                                    onChange: this.loadMnemonic, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 288}}
                                   )
-                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 337}}, "Extended Public Key"  )
-                                      , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 338}}
+                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 302}}, "Extended Public Key"  )
+                                      , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 303}}
                                         , react.createElement('textarea', {
                                           className: 
                                             "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62822,19 +62608,19 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                             resize: "none",
                                             height: 48,
                                             paddingTop: 14
-                                          }, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 339}}
+                                          }, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 304}}
                                         )
                                       )
                                   , react.createElement(ConnectLedger, {
                                     loadXPubKey: this.loadFromLedger,
-                                    network: state.network, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 353}}
+                                    network: state.network, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 318}}
                                   )
                                 )
                               )
 
                               , react.createElement('div', { className: "w-50 fl pa2 pt4 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 360}}
-                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 362}}, "Proxy Socket URL"  )
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 325}}
+                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 327}}, "Proxy Socket URL"  )
                                 , react.createElement('textarea', {
                                   className: 
                                     "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62847,9 +62633,9 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                     height: 48,
                                     paddingTop: 14
                                   },
-                                  onChange: this.loadSocket, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 363}}
+                                  onChange: this.loadSocket, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 328}}
                                 )
-                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 377}}, "Trusted Peer Nodes"  )
+                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 342}}, "Trusted Peer Nodes"  )
                                 , react.createElement('textarea', {
                                   className: 
                                     "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62862,9 +62648,9 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                     height: 48,
                                     paddingTop: 14
                                   },
-                                  onChange: this.loadTrustedPeers, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 378}}
+                                  onChange: this.loadTrustedPeers, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 343}}
                                 )
-                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 392}}, "Network")
+                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 357}}, "Network")
                                 , react.createElement('textarea', {
                                   className: 
                                     "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62877,26 +62663,26 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                     height: 48,
                                     paddingTop: 14
                                   },
-                                  onChange: this.selectNetwork, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 393}}
+                                  onChange: this.selectNetwork, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 358}}
                                 )
                               )
 
                               , react.createElement('div', { className: "w-50 fl pa2 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 409}}
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 374}}
 
-                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 412}}, "Peer Nodes" )
+                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 377}}, "Peer Nodes" )
                                 , react.createElement('div', { className: 
                                     "f7 ba b--gray3 b--gray2-d bg-gray0-d white-d pa1 db w-100 mt2 " +
                                     "focus-b--black focus-b--white-d"
-                                  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 413}}
-                                  , react.createElement('div', { className: "dt dt--fixed f8 lh-copy db fw4"     , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 417}}
-                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 418}}, "Host"
+                                  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 378}}
+                                  , react.createElement('div', { className: "dt dt--fixed f8 lh-copy db fw4"     , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 382}}
+                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 383}}, "Host"
 
                                     )
-                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 421}}, "Agent"
+                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 386}}, "Agent"
 
                                     )
-                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 424}}, "Bytes (↑↓)"
+                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 389}}, "Bytes (↑↓)"
 
                                     )
                                   )
@@ -62905,14 +62691,14 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                     const subver = peer.subver;
                                     const bytes = `${peer.bytessent}/${peer.bytesrecv}`;
                                     return (
-                                      react.createElement('div', { key: index, className: "f9 dt dt--fixed"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 433}}
-                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 434}}
+                                      react.createElement('div', { key: index, className: "f9 dt dt--fixed"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 398}}
+                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 399}}
                                           , addr
                                         )
-                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 437}}
+                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 402}}
                                           , subver
                                         )
-                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 440}}
+                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 405}}
                                           , bytes
                                         )
                                       )
@@ -62922,12 +62708,12 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                               )
 
                               , react.createElement('div', { className: "w-50 fl pa2 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 449}}
-                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 451}}, "Payments"
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 414}}
+                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 416}}, "Payments"
 
                                   )
-                                , react.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 454}}
-                                  , react.createElement('div', { className: "fl", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 455}}
+                                , react.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 419}}
+                                  , react.createElement('div', { className: "fl", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 420}}
                                     , react.createElement(BitcoinTransaction, {
                                       amount: state.amount,
                                       point: state.point,
@@ -62939,10 +62725,10 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                       wdb: state.wdb,
                                       keyring: state.keyring,
                                       account: state.account,
-                                      coinType: state.coinType, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 456}}
+                                      coinType: state.coinType, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 421}}
                                       )
                                   )
-                                  , react.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 470}}
+                                  , react.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 435}}
                                     , react.createElement('textarea', {
                                       className: 
                                         "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62955,10 +62741,10 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                         height: 48,
                                         paddingTop: 14
                                       },
-                                      onChange: this.setPoint, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 471}}
+                                      onChange: this.setPoint, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 436}}
                                     )
                                   )
-                                  , react.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 486}}
+                                  , react.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 451}}
                                     , react.createElement('textarea', {
                                       className: 
                                         "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62971,7 +62757,7 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                         height: 48,
                                         paddingTop: 14
                                       },
-                                      onChange: this.setAmount, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 487}}
+                                      onChange: this.setAmount, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 452}}
                                     )
                                   )
                                 )
@@ -62979,7 +62765,7 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                             )
                         )
                         )
-                      }, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 284}}
+                      }, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 251}}
                       )
                     )
                   )

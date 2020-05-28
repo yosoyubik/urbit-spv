@@ -16,7 +16,6 @@ class Store {
 
         this.state = {
             walletDB: {},
-            account: {}
         };
 
         this.initialReducer = new InitialReducer();

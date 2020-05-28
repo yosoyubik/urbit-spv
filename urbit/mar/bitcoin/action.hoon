@@ -6,8 +6,6 @@
 ++  grab
   |%
   ++  noun  bitcoin-action
-  ++  json
-    |=  jon=^json
-    (json-to-bitcoin-action jon)
+  ++  json  json-to-bitcoin-action 
   --
 --

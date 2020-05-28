@@ -8,8 +8,7 @@ import { api } from "/api";
 import { HeaderBar } from "./lib/headerBar.js"
 import ProgressBar from "./lib/progressBar";
 import BitcoinTransaction from "./lib/bitcoinTransaction";
-import Ledger from "./lib/ledger";
-
+import ConnectLedger from "./lib/connectLedger";
 
 const BCoin = window.BCoin;
 
@@ -18,7 +17,7 @@ export class Root extends Component {
   constructor(props) {
     super(props);
     this.state = store.state;
-    this.state.seed = 'benefit crew supreme gesture quantum web media hazard theory mercy wing kitten';
+    // this.state.seed = 'benefit crew supreme gesture quantum web media hazard theory mercy wing kitten';
     // this.state.progress = 0.0;
     this.state.peers = [];
     this.state.height = 0;
@@ -26,8 +25,14 @@ export class Root extends Component {
     this.state.proxySocket = 'ws://127.0.0.1:9090';
     this.state.peerSeeds = ['127.0.0.1:48444'];
     this.state.network = 'regtest';
-    this.state.unConfirmedBalance = 0.0;
-    this.state.confirmedBalance = 0.0;
+    this.state.account = 0;
+    // this.state.unConfirmedBalance = 0.0;
+    // this.state.confirmedBalance = 0.0;
+    //  FIXME: remove!
+    //
+    // this.state.amount = '0.2' ;
+    // this.state.point = "~sen";
+    // this.state.address = 'mpW3iVi2Td1vqDK8Nfie29ddZXf9spmZkX';
     // this.state.amount = 0.0;
     // this.state.point = null;
     this.state.sent = false;
@@ -43,11 +48,16 @@ export class Root extends Component {
     this.selectNetwork = this.selectNetwork.bind(this);
     this.setPoint = this.setPoint.bind(this);
     this.setAmount = this.setAmount.bind(this);
-    // this.sendTX = this.sendTX.bind(this);
+    this.loadFromLedger = this.loadFromLedger.bind(this);
+    this.keyFromSeed = this.keyFromSeed.bind(this);
   }
 
-  async loadMnemonic(event) {
+  loadMnemonic(event) {
     this.setState({seed: event.target.value});
+  }
+
+  loadFromLedger(xpubkey, path, account) {
+    this.setState({xpubkey: xpubkey, path: path, account: account});
   }
 
   loadTrustedPeers(event) {
@@ -74,10 +84,25 @@ export class Root extends Component {
     this.setState({amount: BCoin.Amount.value(event.target.value)});
   }
 
+  keyFromSeed(coinType, network) {
+    const mnemonic = new BCoin.hd.Mnemonic(this.state.seed);
+    const privKey = BCoin.hd.fromMnemonic(mnemonic);
+    //  BIP 44: m / purpose' / coin_type' / account' / change / index
+    //  Account 0 is sent to the %bitcoin app for address derivation
+    const key = privKey.derivePath(`m/44'/${coinType}'/${this.state.account}'`);
+    const xpub = key.xpubkey(network);
+
+    // const keyring = new BCoin.KeyRing(privKey.privateKey);
+    // const keyring2 = new BCoin.KeyRing(key.derive(0).derive(0).privateKey);
+    this.setState({ xpubkey: xpub, keyring: key });
+    return {xpub: xpub, master: key};
+  }
+
   async startNode() {
+    const { state } = this;
     const config = {
       hash: true,
-      network: this.state.network,
+      network: state.network,
       memory: false,
       logConsole: true,
       workers: true,
@@ -95,8 +120,8 @@ export class Root extends Component {
       // Solution: Run the SPV node and wallet in the same process as a plugin.
       plugins: [BCoin.wallet.plugin],
     }
-    if (this.state.peerSeeds) {
-      config.only = this.state.peerSeeds;
+    if (state.peerSeeds) {
+      config.only = state.peerSeeds;
     }
     const spvNode = new BCoin.SPVNode(config);
     const { wdb } = spvNode.require('walletdb');
@@ -105,41 +130,56 @@ export class Root extends Component {
     await spvNode.open();
     await spvNode.connect();
     spvNode.startSync();
-
-    const mnemonic = new BCoin.hd.Mnemonic(this.state.seed);
-    const privKey = BCoin.hd.fromMnemonic(mnemonic);
     const coinType = spvNode.network.keyPrefix.coinType;
-    // const wallet = await wdb.ensure({ master: privKey, id: 'browser' });
-    // const account = await wallet.getAccount('default');
-
-    // const bip44Key = privKey.derive(44, true);
-    // const bitcoinKey = bip44Key.derive(spvNode.network.keyPrefix.coinType, true);
-
+    const networkType = spvNode.network.type;
+    let xpub;
+    let master;
+    console.log(state);
+    if (state.seed) {
+      console.log("keyFromSeed");
+      const keys = this.keyFromSeed(coinType, networkType);
+      xpub = keys.xpub;
+      master = keys.master
+    }
+    else {
+      console.log("xpub loaded");
+      xpub = BCoin.HDPublicKey.fromBase58(state.xpubkey).xpubkey(networkType);
+    }
+    console.log(xpub);
     const wallet = await wdb.ensure({
       id: ship,
-      master: privKey
-      // mnemonic: mnemonic
-      // accountKey: xpub,
-      // master: masterKey.xprivkey(spvNode.network.type),
+      // master: master
+      accountKey: xpub,
+      watchOnly: true
     });
 
-    //  BIP 44: m / purpose' / coin_type' / account' / change / index
-    //  Account 0 is sent to the %bitcoin app for address derivation
-    const masterKey = wallet.master.key.derivePath(`m/44'/${coinType}'/0'`);
-    const xpub = masterKey.xpubkey(spvNode.network.type);
-
-    // const wallet = await wdb.ensure({ accountKey: xpub, id: ship, watchOnly: true });
     const key1 = await wallet.createReceive(0);
-
     console.log(key1.getAddress('string', spvNode.network.type));
+    // console.log(
+    //   key1.getAddress('string', spvNode.network.type),
+    //   "is this my address?",
+    //   wallet.hasAddress(key1),
+    //   wallet.getAccountByAddress(key1)
+    // );
 
     const ak = BCoin.HDPublicKey.fromBase58(xpub);
     const pk = ak.derive(0).derive(0);
-    const addr2 = new BCoin.KeyRing(pk).getAddress('string', spvNode.network.type);
+    const addr2 = new BCoin.KeyRing(pk);
+    const anAddr = BCoin.Address.fromBase58(
+      addr2.getAddress('base58', spvNode.network.type)
+    );
+    console.log(
+      anAddr,
+      "is this my address?",
+      await wallet.hasAddress(anAddr),
+      await wallet.getAccountByAddress(anAddr)
+    );
+    // Test
 
-    console.log(addr2);
 
-    if (!this.state.hasXPub) {
+
+    if (!state.hasXPub || state.seed) {
+      console.log("sending xpub");
       api.add.xpubkey(xpub);
     }
 
@@ -155,16 +195,27 @@ export class Root extends Component {
 
     spvNode.on('block', async block => { this.getInfo(); });
     spvNode.on('block connect', async (block) => { this.getInfo(); });
+    spvNode.on('tx', async tx => {
+      console.log("new tx", tx);
+      await wdb.addTX(tx);
+      const balance = await wallet.getBalance();
+      const nTX = balance.tx;
+      const coins = balance.coin;
+      this.setState({
+        unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
+        confirmedBalance: BCoin.Amount.btc(balance.unconfirmed)
+      });
+    });
     spvNode.pool.on('peer connect', () => { this.getInfo(); });
     spvNode.pool.on('peer close', () => { this.getInfo(); });
     spvNode.pool.on('peer open', () => { this.getInfo(); });
     spvNode.pool.on('packet', () => { this.getInfo(); });
 
     this.setState({
-      privKey: privKey,
       wallet: wallet,
       node: spvNode,
-      wdb: wdb
+      wdb: wdb,
+      coinType: coinType
     });
   }
 
@@ -219,10 +270,12 @@ export class Root extends Component {
   render() {
     const { props, state } = this;
     let node = !!state.node ? state.node : {};
+    let confirmed = !!state.confirmedBalance ? state.confirmedBalance : 0;
+    let unconfirmed = !!state.unConfirmedBalance ? state.unConfirmedBalance : 0;
 
-    let createClasses = !!state.seed
-      ? "pointer db f9 mt7 green2 bg-gray0-d ba pv3 ph4 b--green2"
-      : "pointer db f9 mt7 gray2 ba bg-gray0-d pa2 pv3 ph4 b--gray3";
+    let createClasses = (!!state.seed || state.xpubkey)
+      ? "pointer db f9 mt3 green2 bg-gray0-d ba pv3 ph4 b--green2"
+      : "pointer db f9 mt3 gray2 ba bg-gray0-d pa2 pv3 ph4 b--gray3";
 
     return (
       <BrowserRouter>
@@ -232,31 +285,109 @@ export class Root extends Component {
             return (
               <div className="cf w-100 flex flex-column pa4 ba-m ba-l ba-xl b--gray2 br1 h-100 h-100-minus-40-m h-100-minus-40-l h-100-minus-40-xl f9 white-d">
                 <h1 className="mb3 f8">Bitcoin</h2>
-                <div className="mono wrap">
-                  Current Height: {state.height}
+                <div>
+                  <div className={"cf w-20 fl pa2 overflow-x-hidden " +
+                                  "bg-gray0-d white-d flex flex-column"}>
+                    <button
+                      onClick={this.startNode}
+                      className={createClasses}>
+                      Start Node Sync
+                    </button>
+                  </div>
+                  <div className={"cf w-60 fl pa2 pt4 overflow-x-hidden " +
+                                  "bg-gray0-d white-d flex flex-column"}>
+                    <div className="mono wrap">
+                      Current Height: {state.height}
+                    </div>
+                    <div className="mono wrap">
+                      Current Hash: {state.hash}
+                    </div>
+
+
+                    { ProgressBar(( (state.progress) ? state.progress : 0) )}
+                  </div>
+                  <div className="cf w-20 fl pa2 pt4 overflow-x-hidden bg-gray0-d white-d flex flex-column">
+                    <div className="f6 mono wrap">
+                      Balance: {confirmed}
+                    </div>
+                    <div className="f6 mono wrap">
+                      Pending: {Math.abs(confirmed - unconfirmed)}
+                    </div>
+                  </div>
                 </div>
-                <div className="mono wrap">
-                  Current Hash: {state.hash}
-                </div>
-                { ProgressBar(( (state.progress) ? state.progress : 0) )}
-              <div>
-                <div className={"cf w-50 fl pa2 pt4 overflow-x-hidden " +
-                                "bg-gray0-d white-d flex flex-column"}>
-                  <div className="w-100">
-                    <p className="f8 mt3 lh-copy db">Mnemonic seed</p>
+                <div>
+                  <div className={"cf w-50 fl pa2 pt4 overflow-x-hidden " +
+                                  "bg-gray0-d white-d flex flex-column"}>
+                    <div className="w-100">
+                      <p className="f8 mt3 lh-copy db">Mnemonic seed</p>
+                      <textarea
+                        className={
+                          "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
+                          "focus-b--black focus-b--white-d"
+                        }
+                        rows={1}
+                        placeholder="benefit crew supreme gesture quantum web media hazard theory mercy wing kitten"
+                        style={{
+                          resize: "none",
+                          height: 48,
+                          paddingTop: 14
+                        }}
+                        onChange={this.loadMnemonic}
+                      />
+                      <p className="f8 mt3 lh-copy db">Extended Public Key</p>
+                          <div className="mono wrap">
+                            <textarea
+                              className={
+                                "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
+                                "focus-b--black focus-b--white-d"
+                              }
+                              rows={1}
+                              placeholder={state.xpubkey}
+                              style={{
+                                resize: "none",
+                                height: 48,
+                                paddingTop: 14
+                              }}
+                            />
+                          </div>
+                      <ConnectLedger
+                        loadXPubKey={this.loadFromLedger}
+                        network={state.network}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={"w-50 fl pa2 pt4 overflow-x-hidden " +
+                                  "bg-gray0-d white-d flex flex-column"}>
+                    <p className="f8 mt3 lh-copy db">Proxy Socket URL</p>
                     <textarea
                       className={
-                        "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
+                        "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
                         "focus-b--black focus-b--white-d"
                       }
                       rows={1}
-                      placeholder="benefit crew supreme gesture quantum web media hazard theory mercy wing kitten"
+                      placeholder="ws://127.0.0.1:9090"
                       style={{
                         resize: "none",
                         height: 48,
                         paddingTop: 14
                       }}
-                      onChange={this.loadMnemonic}
+                      onChange={this.loadSocket}
+                    />
+                    <p className="f8 mt3 lh-copy db">Trusted Peer Nodes</p>
+                    <textarea
+                      className={
+                        "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
+                        "focus-b--black focus-b--white-d"
+                      }
+                      rows={1}
+                      placeholder="No peers by default"
+                      style={{
+                        resize: "none",
+                        height: 48,
+                        paddingTop: 14
+                      }}
+                      onChange={this.loadTrustedPeers}
                     />
                     <p className="f8 mt3 lh-copy db">Network</p>
                     <textarea
@@ -274,154 +405,103 @@ export class Root extends Component {
                       onChange={this.selectNetwork}
                     />
                   </div>
-                </div>
 
-                <div className={"w-50 fl pa2 pt4 overflow-x-hidden " +
-                                "bg-gray0-d white-d flex flex-column"}>
-                  <p className="f8 mt3 lh-copy db">Proxy Socket URL</p>
-                  <textarea
-                    className={
-                      "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
-                      "focus-b--black focus-b--white-d"
-                    }
-                    rows={1}
-                    placeholder="ws://127.0.0.1:9090"
-                    style={{
-                      resize: "none",
-                      height: 48,
-                      paddingTop: 14
-                    }}
-                    onChange={this.loadSocket}
-                  />
-                  <p className="f8 mt3 lh-copy db">Trusted Peer Nodes</p>
-                  <textarea
-                    className={
-                      "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
-                      "focus-b--black focus-b--white-d"
-                    }
-                    rows={1}
-                    placeholder="No peers by default"
-                    style={{
-                      resize: "none",
-                      height: 48,
-                      paddingTop: 14
-                    }}
-                    onChange={this.loadTrustedPeers}
-                  />
-                </div>
+                  <div className={"w-50 fl pa2 overflow-x-hidden " +
+                                  "bg-gray0-d white-d flex flex-column"}>
 
-                <div className={"w-50 fl pa2 pt4 overflow-x-hidden " +
-                                "bg-gray0-d white-d flex flex-column"}>
-                  <button
-                    onClick={this.startNode}
-                    className={createClasses}>
-                    Start Node Sync
-                  </button>
-                  <p className="f8 mt3 lh-copy db">Peer Nodes</p>
-                  <div className={
-                      "f7 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
-                      "focus-b--black focus-b--white-d"
-                    }>
-                    <div className="dt dt--fixed f8 lh-copy db fw4">
-                      <div className="fl w-third bb b--gray4 b--gray2-d gray2 tc">
-                        Host
-                      </div>
-                      <div className="fl w-third bb b--gray4 b--gray2-d gray2 tc">
-                        Agent
-                      </div>
-                      <div className="fl w-third bb b--gray4 b--gray2-d gray2 tc">
-                        Bytes (↑↓)
-                      </div>
-                    </div>
-                    {state.peers.map((peer, index) => {
-                      const addr = peer.addr;
-                      const subver = peer.subver;
-                      const bytes = `${peer.bytessent}/${peer.bytesrecv}`;
-                      return (
-                        <div key={index} className="f9 dt dt--fixed">
-                          <div className="fl w-third tc mono wrap">
-                            {addr}
-                          </div>
-                          <div className="fl w-third tc mono wrap">
-                            {subver}
-                          </div>
-                          <div className="fl w-third tc mono wrap">
-                            {bytes}
-                          </div>
+                    <p className="f8 mt3 lh-copy db">Peer Nodes</p>
+                    <div className={
+                        "f7 ba b--gray3 b--gray2-d bg-gray0-d white-d pa1 db w-100 mt2 " +
+                        "focus-b--black focus-b--white-d"
+                      }>
+                      <div className="dt dt--fixed f8 lh-copy db fw4">
+                        <div className="fl w-third bb b--gray4 b--gray2-d gray2 tc">
+                          Host
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div className={"w-50 fl pa2 pt4 overflow-x-hidden " +
-                                "bg-gray0-d white-d flex flex-column"}>
-                    { (state.node) ?
-                      <BitcoinTransaction
-                        amount={state.amount}
-                        point={state.point}
-                        api={api}
-                        address={state.address}
-                        network={state.network}
-                        wallet={state.wallet}
-                        node={node}
-                        wdb={state.wdb}
-                      /> : null
-                    }
-                  <div className="w-100">
-                    <div className="w-third fl pa2">
-                      <p className="f8 mt3 lh-copy db">Balance</p>
-                      <div className="f8 mt3 lh-copy db mono wrap">
-                      Balance (total): {this.state.unConfirmedBalance}
+                        <div className="fl w-third bb b--gray4 b--gray2-d gray2 tc">
+                          Agent
+                        </div>
+                        <div className="fl w-third bb b--gray4 b--gray2-d gray2 tc">
+                          Bytes (↑↓)
+                        </div>
                       </div>
-                      <div className="f8 mt3 lh-copy db mono wrap">
-                        Pending: {Math.abs(this.state.confirmedBalance - this.state.unConfirmedBalance)}
-                      </div>
-                    </div>
-                    <div className="w-third fl pa2">
-                      <p className="f8 mt3 lh-copy db">Point</p>
-                      <textarea
-                        className={
-                          "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
-                          "focus-b--black focus-b--white-d"
-                        }
-                        rows={1}
-                        placeholder="~marzod"
-                        style={{
-                          resize: "none",
-                          height: 48,
-                          paddingTop: 14
-                        }}
-                        onChange={this.setPoint}
-                      />
-                    </div>
-                    <div className="w-third fl pa2">
-                      <p className="f8 mt3 lh-copy db">Amount</p>
-                      <textarea
-                        className={
-                          "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
-                          "focus-b--black focus-b--white-d"
-                        }
-                        rows={1}
-                        placeholder="0.0 BTC"
-                        style={{
-                          resize: "none",
-                          height: 48,
-                          paddingTop: 14
-                        }}
-                        onChange={this.setAmount}
-                      />
+                      {state.peers.map((peer, index) => {
+                        const addr = peer.addr;
+                        const subver = peer.subver;
+                        const bytes = `${peer.bytessent}/${peer.bytesrecv}`;
+                        return (
+                          <div key={index} className="f9 dt dt--fixed">
+                            <div className="fl w-third tc mono wrap">
+                              {addr}
+                            </div>
+                            <div className="fl w-third tc mono wrap">
+                              {subver}
+                            </div>
+                            <div className="fl w-third tc mono wrap">
+                              {bytes}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
+
+                  <div className={"w-50 fl pa2 overflow-x-hidden " +
+                                  "bg-gray0-d white-d flex flex-column"}>
+                      <p className="f8 mt3 lh-copy db">
+                        Payments
+                      </p>
+                    <div className="w-100">
+                      <div className="fl">
+                        <BitcoinTransaction
+                          amount={state.amount}
+                          point={state.point}
+                          api={api}
+                          address={state.address}
+                          network={state.network}
+                          wallet={state.wallet}
+                          node={node}
+                          wdb={state.wdb}
+                          keyring={state.keyring}
+                          account={state.account}
+                          coinType={state.coinType}
+                          />
+                      </div>
+                      <div className="w-third fl pr2">
+                        <textarea
+                          className={
+                            "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
+                            "focus-b--black focus-b--white-d"
+                          }
+                          rows={1}
+                          placeholder="~marzod"
+                          style={{
+                            resize: "none",
+                            height: 48,
+                            paddingTop: 14
+                          }}
+                          onChange={this.setPoint}
+                        />
+                      </div>
+                      <div className="w-third fl pr2">
+                        <textarea
+                          className={
+                            "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
+                            "focus-b--black focus-b--white-d"
+                          }
+                          rows={1}
+                          placeholder="0.0 BTC"
+                          style={{
+                            resize: "none",
+                            height: 48,
+                            paddingTop: 14
+                          }}
+                          onChange={this.setAmount}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-
-                <div className={"w-100 fl pa2 pt4 overflow-x-hidden " +
-                                "bg-gray0-d white-d flex flex-column"}>
-                  <Ledger />
-                </div>
-
-              </div>
             </div>
             )
           }}

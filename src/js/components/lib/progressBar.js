@@ -3,7 +3,7 @@ import React from 'react';
 // progress is [0, 1]
 export default function ProgressBar(progress) {
   return (
-    <div className='rel bg-gray3 full' style={{ height: '16px' }}>
+    <div className='rel bg-gray3 full' style={{ height: '14px' }}>
       <div
         className="abs bg-green2 animated-width tc mono"
         style={{

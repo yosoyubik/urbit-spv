@@ -1,7 +1,7 @@
 ::  bitcoin: A Store for Bitcoin using Bcoin as an SPV node
 ::
 ::    data:            scry command:
-::
+::    ________         _________________________________________
 ::    xpub             .^(tape %gx /=bitcoin=/xpub/noun)
 ::
 /-  *bitcoin
@@ -70,6 +70,34 @@
   /|  /js/
       /~  ~
   ==
+/=  bpath
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/bpath
+  /|  /js/
+      /~  ~
+  ==
+/=  binput
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/binput
+  /|  /js/
+      /~  ~
+  ==
+/=  bhelper
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/bhelper
+  /|  /js/
+      /~  ~
+  ==
+/=  bcommon
+  /^  octs
+  /;  as-octs:mimes:html
+  /:  /===/app/bitcoin/js/bcommon
+  /|  /js/
+      /~  ~
+  ==
 /=  style
   /^  octs
   /;  as-octs:mimes:html
@@ -109,11 +137,16 @@
     ++  on-init
       ^-  (quip card _this)
       :_  this(xpub ~)
-      :: :_  this(xpub "tpubD6NzVbkrYhZ4XnhCewQV4KAr7up7HhgQUEbjFYyiBde3Uau2G3zx25wJchZi9Wubh538fyaXsrQZ2pHj8XzyDZpG3PbXG2vv8b6UtkoVaJ3")
-      :: :_  this(xpub "tpubDCM6CKkxH8ZLGRWSLzX641zu8Ei8HgfeNsDxg1X9sWY3dCdeFb7XorHgGBA6iWAgCCAinSfYTmt8eF4VxBe7i8EHEZkR8tVLCUwA7DmZhmw")
       :~  launch-poke
           [%pass /bind/bitcoin %arvo %e %connect [~ /'~bitcoin'] %bitcoin]
       ==
+    ::
+    ++  on-save
+      !>(state)
+    ::
+    ++  on-load
+      |=  old=vase
+      `this(state !<(state-zero old))
     ::
     ++  on-poke
       |=  [=mark =vase]
@@ -132,6 +165,7 @@
         poke-handle-http-request:bc
       ::
           %bitcoin-action
+        ~&  !<(bitcoin-action vase)
         =^  cards  state
           (handle-bitcoin-action:bc !<(bitcoin-action vase))
         [cards this]
@@ -140,25 +174,22 @@
     ++  on-watch
       |=  =path
       ^-  (quip card _this)
-      ?:  ?=([%http-response *] path)
-        `this
-      ?.  =(/primary path)
-        ~&  [src.bowl path]
-        (on-watch:def path)
-      =/  message=json  (frond:enjs:format [%initial b+?:(=(xpub "") | &)])
-      [[%give %fact ~ %json !>(message)]~ this]
+      :_  this
+      ?+    path  ~|([%peer-bitcoin-strange path] !!)
+          [%bitcointile ~]    [%give %fact ~ %json !>(*json)]~
+          [%primary *]        [send-xpubkey]~
+          [%http-response *]  ~
+      ==
     ::
     ++  on-agent  on-agent:def
     ::
     ++  on-arvo
       |=  [=wire =sign-arvo]
       ^-  (quip card _this)
-      ?.  ?=(%bound +<.sign-arvo)
-        (on-arvo:def wire sign-arvo)
-      [~ this]
+      ?:  ?=(%bound +<.sign-arvo)
+        [~ this]
+      (on-arvo:def wire sign-arvo)
     ::
-    ++  on-save  on-save:def
-    ++  on-load  on-load:def
     ++  on-leave  on-leave:def
     ::  +on-peek: read from app state
     ::
@@ -189,12 +220,21 @@
   |=  act=bitcoin-action
   ?>  ?=(%derive -.act)
   ^-  card
-  [%pass / %agent [ship.act %bitcoin] %poke %bitcoin-action !>(act)]
+  [%pass /derive-poke %agent [ship.act %bitcoin] %poke %bitcoin-action !>(act)]
 ::
 ++  receive-poke
   |=  [=ship act=bitcoin-action]
   ^-  card
-  [%pass / %agent [ship %bitcoin] %poke %bitcoin-action !>(act)]
+  [%pass /receive-poke %agent [ship %bitcoin] %poke %bitcoin-action !>(act)]
+::
+++  send-xpubkey
+  ^-  card
+  :*  %give
+      %fact
+      ~
+      %json
+      !>((frond:enjs:format [%initial s+(crip xpub)]))
+  ==
 ::
 ++  handle-json
   |=  jon=json
@@ -218,6 +258,7 @@
     |=  xpub=tape
     ^-  (quip card _state)
     ?>  (team:title our.bowl src.bowl)
+    ~&  "New xpubkey: {xpub}"
     [~ state(xpub xpub)]
   ::
   ++  handle-remove
@@ -233,10 +274,9 @@
   ++  handle-derive
     |=  [account=@ net=network]
     ^-  (quip card _state)
+    ~&  [src.bowl account net]
     |^
     =/  addr=@uc  (derive-address random-index net)
-      :: %+  derive-address  net
-      :: (derivation-path account random-index net)
     :_  state
     ?:  (team:title our.bowl src.bowl)
       ::  Local derive
@@ -244,6 +284,7 @@
       ~&(addr ~)
     ::  Foreign derive
     ::
+    ~&  "{<src.bowl>} requests a new address..."
     [(receive-poke src.bowl [%receive addr])]~
     ::
     ++  derive-address
@@ -256,27 +297,6 @@
         (~(address hd-path +<.hd-path) network)
       =>   [(from-extended xpub) .]
       (derive-path "m/0/{((d-co:co 1) index)}")
-      :: =/  hd-initial  (from-extended xpub)
-      :: (~(derive-sequence hd-initial +<.hd-initial) ~[0 index])
-
-      ::  Random index for each derivation
-      ::
-      :: ~&  [network xpub]
-      :: =+  (from-extended xpub)
-      :: ~&  public-key+`@ux`public-key
-      :: =+  (derive-sequence ~[0 0])
-      :: ~&  public-key+`@ux`public-key
-      :: ~&  (address network)
-      :: ~&  identity
-      :: ~&  (address network)
-      :: 0cmn8xJjYWUAPGrnFCDgTtARWsajjPLZgzEt
-      :: ~&  [network (address network)]
-      :: ~&  [%main (address %main)]
-      :: ~&  [network (pub-extended network)]
-      :: ~&  [%main (pub-extended %main)]
-      :: ~&  [%identity `@uc`identity]
-      :: identity
-      :: (derive-path:(from-extended xpub) path)
     ::
     ++  type-from-network
       |=  =network
@@ -329,11 +349,15 @@
       [%'~bitcoin' %js %tile ~]       (js-response:gen tile-js)
       [%'~bitcoin' %js %index ~]      (js-response:gen script)
       [%'~bitcoin' %js %bcoin ~]      (js-response:gen bcoin)
+      [%'~bitcoin' %js %bpath ~]      (js-response:gen bpath)
       [%'~bitcoin' %js %proxy ~]      (js-response:gen proxy)
       [%'~bitcoin' %js %logger ~]     (js-response:gen logger)
       [%'~bitcoin' %js %worker ~]     (js-response:gen worker)
       [%'~bitcoin' %js %bledger ~]    (js-response:gen bledger)
       [%'~bitcoin' %js %bmanager ~]   (js-response:gen bmanager)
+      [%'~bitcoin' %js %binput ~]     (js-response:gen binput)
+      [%'~bitcoin' %js %bhelper ~]    (js-response:gen bhelper)
+      [%'~bitcoin' %js %bcommon ~]    (js-response:gen bcommon)
   ::
       [%'~bitcoin' %img @t *]
     =/  name=@t  i.t.t.site.url
@@ -354,8 +378,7 @@
 ::
 ++  random-index
   ^-  @ud
-  0
-  :: (~(rad og eny.bowl) (pow 2 31))
+  (~(rad og eny.bowl) (pow 2 31))
 ::
 ++  parse-btc
   |=  b=@t

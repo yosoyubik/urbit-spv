@@ -234,14 +234,14 @@
 ::      pubkey hash (testnet/regtest): 0x6f
 ::      priv hash   (testnet/regtest): 0xef
 ::
-++  version-bytes
+++  version-bytes 
   |=  [network=?(%main %regtest %testnet) type=?(%pub %priv) bip32=?]
   ^-  @ux
   |^  ?+  [network type]  ~|(%not-supported-version-bytes !!)
-        [?(%regtest %testnet) %pub]   ?:(bip32 xpub-key pay-to-pubkey)        ::0x435.87cf  :: xpub-key
-        [?(%regtest %testnet) %priv]  ?:(bip32 xpriv-key private-key)       ::0x435.8394  :: xpriv-key
-        [%main %pub]                  ?:(bip32 xpub-key pay-to-pubkey)       ::0x488.b21e  :: xpub-key
-        [%main %priv]                 ?:(bip32 xpriv-key private-key)       ::0x488.ade4  :: xpriv-key
+        [?(%regtest %testnet) %pub]   ?:(bip32 xpub-key pay-to-pubkey)
+        [?(%regtest %testnet) %priv]  ?:(bip32 xpriv-key private-key)
+        [%main %pub]                  ?:(bip32 xpub-key pay-to-pubkey)
+        [%main %priv]                 ?:(bip32 xpriv-key private-key)
       ==
   ::
   ++  pay-to-pubkey  ?:(=(type %main) 0x0 0x6f)

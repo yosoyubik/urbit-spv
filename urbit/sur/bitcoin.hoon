@@ -12,7 +12,7 @@
       [%receive @uc]
   ==
 ::
-+$  bitcoin-update
++$  bitcoin-update 
   $%  bitcoin-action
   ==
 --

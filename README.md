@@ -82,6 +82,15 @@ server in this repo. In order to run it, open a new tab in your terminal and run
 node btc-proxy-server.js
 ```
 
+## Local BCoin nodes
+
+- Full Node with Bip37 support and SPV node.
+```
+$ ./bin/bcoin --network=regtest --bip37=true --http-port=48445 --listen-true --memory=false --log-level=spam
+
+$ ./bin/bcoin --network=regtest --spv --http-port=48449 --wallet-http-port=48450 --memory=false --prefix ~/.bcoin_spv  --max-outbound=1
+```
+
 ## Appendix
 
 # Bcoin dependencies

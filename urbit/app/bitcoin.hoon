@@ -378,7 +378,8 @@
 ::
 ++  random-index
   ^-  @ud
-  (~(rad og eny.bowl) (pow 2 31))
+  0
+  :: (~(rad og eny.bowl) (pow 2 31))
 ::
 ++  parse-btc
   |=  b=@t

@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import classnames from 'classnames';
 
 import { HeaderBar } from '/components/lib/header-bar';
-import { KeybaseSidebar } from '/components/lib/keybase-sidebar';
 
 export class Skeleton extends Component {
   render() {

@@ -1,10 +1,7 @@
 import React, { Component } from 'react';
-import urbitOb from "urbit-ob";
 
 const BCoin = window.BCoin;
 const usb = navigator.usb;
-console.log(window.BManager);
-
 import Ledger from '../../lib/ledger';
 
 

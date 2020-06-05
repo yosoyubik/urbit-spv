@@ -5,7 +5,6 @@ import Ledger from '../../lib/ledger';
 
 const BCoin = window.BCoin;
 const Path = window.BPath.Path;
-// const BInputData = window.BInputData.InputData;
 
 const STATE = {
   INIT: 'INIT',
@@ -43,12 +42,10 @@ export default class BitcoinTransaction extends Component {
         error: false,
         awaitingAddres: true
       }, () => {
-        //  UNCOMMENT ME!
         api.request.address(
           this.props.point.replace("~", ""),
           this.props.network
-        )
-          .then(() => {
+        ).then(() => {
           this.setState({awaitingAddres: false, status: STATE.READY});
         })
       });
@@ -84,16 +81,16 @@ export default class BitcoinTransaction extends Component {
           const data = {};
           const prevhash = input.prevout.hash;
           const txRecord = await wallet.getTX(prevhash);
-          data.prevTX = BCoin.TX.fromOptions(txRecord.tx);
           const coin = mtx.view.getCoinFor(input);
           const path = Path.fromList([44, coinType, account], true);
           const base = path.clone();
           const address = coin.getAddress();
           const addressPath = await wallet.getPath(address.getHash());
+          data.coin = coin;
+          data.prevTX = BCoin.TX.fromOptions(txRecord.tx);
           data.path = base.push(addressPath.branch).push(addressPath.index);
           // This will fail with Nested addresses.
           data.witness = input.type === BCoin.Address.types.WITNESS;
-          data.coin = coin;
           inputData.push(data);
       }
       // Signing
@@ -112,7 +109,6 @@ export default class BitcoinTransaction extends Component {
       }
       const ans = await node.sendTX(tx);
       await wdb.addTX(tx);
-      const balance = await wallet.getBalance();
     } else {
       console.log("ERROR tx won't verify...", mtx, keyring);
     }
@@ -122,7 +118,6 @@ export default class BitcoinTransaction extends Component {
     const { props, state, buttonMessage, requestAddress, sendBTCTransaction } = this;
     const isDefaultState = ( props.point === undefined || props.amount === undefined );
     let isValidPoint;
-    // let isReady;
     if (props.point) {
       isValidPoint = (!isDefaultState && urbitOb.isValidPatp(props.point));
     }

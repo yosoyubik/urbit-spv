@@ -51112,21 +51112,6 @@
                 }
             }
 
-            class UpdateReducer {
-                reduce(json, state) {
-                    let data = lodash.get(json, 'update', false);
-                    if (data) {
-                        this.reduceInbox(lodash.get(data, 'inbox', false), state);
-                    }
-                }
-
-                reduceInbox(inbox, state) {
-                    if (inbox) {
-                        state.inbox = inbox;
-                    }
-                }
-            }
-
             class Store {
 
                 constructor() {
@@ -51137,7 +51122,6 @@
 
                     this.initialReducer = new InitialReducer();
                     this.addressReducer = new AddressReducer();
-                    this.updateReducer = new UpdateReducer();
                     this.setState = () => { };
                 }
 
@@ -51152,7 +51136,6 @@
                     console.log(this.state);
                     this.initialReducer.reduce(json, this.state);
                     this.addressReducer.reduce(json, this.state);
-                    this.updateReducer.reduce(json, this.state);
 
                     this.setState(this.state);
                 }
@@ -62620,8 +62603,8 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                 let unconfirmed = !!state.unConfirmedBalance ? state.unConfirmedBalance : 0;
 
                 let createClasses = (!!state.seed || state.xpubkey)
-                  ? "pointer db f9 mt3 green2 bg-gray0-d ba pv3 ph4 b--green2"
-                  : "pointer db f9 mt3 gray2 ba bg-gray0-d pa2 pv3 ph4 b--gray3";
+                  ? "pointer db f9 mt1 green2 bg-gray0-d ba pv1 ph1 b--green2"
+                  : "pointer db f9 mt1 gray2 ba bg-gray0-d pa1 pv1 ph1 b--gray3";
 
                 return (
                   react.createElement(BrowserRouter, {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 338}}
@@ -62635,36 +62618,40 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                               , react.createElement('div', { className: "cf w-20 fl pa2 overflow-x-hidden " +
                                               "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 346}}
                                 , react.createElement('button', {
-                                  // onClick={this.startNode}
-                                  onClick: this.connectClientNode,
+                                  onClick: this.startNode,
                                   className: createClasses, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 348}}, "Start Node Sync"
+
+                                )
+                                , react.createElement('button', {
+                                  onClick: this.connectClientNode,
+                                  className: createClasses, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 353}}, "Start Node Sync"
 
                                 )
                               )
                               , react.createElement('div', { className: "cf w-60 fl pa2 pt4 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 355}}
-                                , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 357}}, "Current Height: "
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 359}}
+                                , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 361}}, "Current Height: "
                                     , state.height
                                 )
-                                , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 360}}, "Current Hash: "
+                                , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 364}}, "Current Hash: "
                                     , state.hash
                                 )
                                 ,  ProgressBar(( (state.progress) ? state.progress : 0) )
                               )
-                              , react.createElement('div', { className: "cf w-20 fl pa2 pt4 overflow-x-hidden bg-gray0-d white-d flex flex-column"         , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 365}}
-                                , react.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 366}}, "Balance: "
+                              , react.createElement('div', { className: "cf w-20 fl pa2 pt4 overflow-x-hidden bg-gray0-d white-d flex flex-column"         , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 369}}
+                                , react.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 370}}, "Balance: "
                                    , confirmed
                                 )
-                                , react.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 369}}, "Pending: "
+                                , react.createElement('div', { className: "f6 mono wrap"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 373}}, "Pending: "
                                    , Math.abs(confirmed - unconfirmed)
                                 )
                               )
                             )
-                            , react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 374}}
+                            , react.createElement('div', {__self: this, __source: {fileName: _jsxFileName$6, lineNumber: 378}}
                               , react.createElement('div', { className: "cf w-50 fl pa2 pt4 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 375}}
-                                , react.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 377}}
-                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 378}}, "Mnemonic seed" )
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 379}}
+                                , react.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 381}}
+                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 382}}, "Mnemonic seed" )
                                   , react.createElement('textarea', {
                                     className: 
                                       "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62677,10 +62664,10 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                       height: 48,
                                       paddingTop: 14
                                     },
-                                    onChange: this.loadMnemonic, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 379}}
+                                    onChange: this.loadMnemonic, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 383}}
                                   )
-                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 393}}, "Extended Public Key"  )
-                                      , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 394}}
+                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 397}}, "Extended Public Key"  )
+                                      , react.createElement('div', { className: "mono wrap" , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 398}}
                                         , react.createElement('textarea', {
                                           className: 
                                             "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62692,19 +62679,19 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                             resize: "none",
                                             height: 48,
                                             paddingTop: 14
-                                          }, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 395}}
+                                          }, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 399}}
                                         )
                                       )
                                   , react.createElement(ConnectLedger, {
                                     loadXPubKey: this.loadFromLedger,
-                                    network: state.network, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 409}}
+                                    network: state.network, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 413}}
                                   )
                                 )
                               )
 
                               , react.createElement('div', { className: "w-50 fl pa2 pt4 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 416}}
-                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 418}}, "Proxy Socket URL"  )
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 420}}
+                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 422}}, "Proxy Socket URL"  )
                                 , react.createElement('textarea', {
                                   className: 
                                     "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62717,9 +62704,9 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                     height: 48,
                                     paddingTop: 14
                                   },
-                                  onChange: this.loadSocket, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 419}}
+                                  onChange: this.loadSocket, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 423}}
                                 )
-                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 433}}, "Trusted Peer Nodes"  )
+                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 437}}, "Trusted Peer Nodes"  )
                                 , react.createElement('textarea', {
                                   className: 
                                     "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62732,9 +62719,9 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                     height: 48,
                                     paddingTop: 14
                                   },
-                                  onChange: this.loadTrustedPeers, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 434}}
+                                  onChange: this.loadTrustedPeers, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 438}}
                                 )
-                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 448}}, "Network")
+                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 452}}, "Network")
                                 , react.createElement('textarea', {
                                   className: 
                                     "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62747,26 +62734,26 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                     height: 48,
                                     paddingTop: 14
                                   },
-                                  onChange: this.selectNetwork, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 449}}
+                                  onChange: this.selectNetwork, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 453}}
                                 )
                               )
 
                               , react.createElement('div', { className: "w-50 fl pa2 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 465}}
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 469}}
 
-                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 468}}, "Peer Nodes" )
+                                , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 472}}, "Peer Nodes" )
                                 , react.createElement('div', { className: 
                                     "f7 ba b--gray3 b--gray2-d bg-gray0-d white-d pa1 db w-100 mt2 " +
                                     "focus-b--black focus-b--white-d"
-                                  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 469}}
-                                  , react.createElement('div', { className: "dt dt--fixed f8 lh-copy db fw4"     , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 473}}
-                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 474}}, "Host"
+                                  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 473}}
+                                  , react.createElement('div', { className: "dt dt--fixed f8 lh-copy db fw4"     , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 477}}
+                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 478}}, "Host"
 
                                     )
-                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 477}}, "Agent"
+                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 481}}, "Agent"
 
                                     )
-                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 480}}, "Bytes (↑↓)"
+                                    , react.createElement('div', { className: "fl w-third bb b--gray4 b--gray2-d gray2 tc"      , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 484}}, "Bytes (↑↓)"
 
                                     )
                                   )
@@ -62775,14 +62762,14 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                     const subver = peer.subver;
                                     const bytes = `${peer.bytessent}/${peer.bytesrecv}`;
                                     return (
-                                      react.createElement('div', { key: index, className: "f9 dt dt--fixed"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 489}}
-                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 490}}
+                                      react.createElement('div', { key: index, className: "f9 dt dt--fixed"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 493}}
+                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 494}}
                                           , addr
                                         )
-                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 493}}
+                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 497}}
                                           , subver
                                         )
-                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 496}}
+                                        , react.createElement('div', { className: "fl w-third tc mono wrap"    , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 500}}
                                           , bytes
                                         )
                                       )
@@ -62792,12 +62779,12 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                               )
 
                               , react.createElement('div', { className: "w-50 fl pa2 overflow-x-hidden " +
-                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 505}}
-                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 507}}, "Payments"
+                                              "bg-gray0-d white-d flex flex-column", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 509}}
+                                  , react.createElement('p', { className: "f8 mt3 lh-copy db"   , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 511}}, "Payments"
 
                                   )
-                                , react.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 510}}
-                                  , react.createElement('div', { className: "fl", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 511}}
+                                , react.createElement('div', { className: "w-100", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 514}}
+                                  , react.createElement('div', { className: "fl", __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 515}}
                                     , react.createElement(BitcoinTransaction, {
                                       amount: state.amount,
                                       point: state.point,
@@ -62809,10 +62796,10 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                       wdb: state.wdb,
                                       keyring: state.keyring,
                                       account: state.account,
-                                      coinType: state.coinType, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 512}}
+                                      coinType: state.coinType, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 516}}
                                       )
                                   )
-                                  , react.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 526}}
+                                  , react.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 530}}
                                     , react.createElement('textarea', {
                                       className: 
                                         "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62825,10 +62812,10 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                         height: 48,
                                         paddingTop: 14
                                       },
-                                      onChange: this.setPoint, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 527}}
+                                      onChange: this.setPoint, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 531}}
                                     )
                                   )
-                                  , react.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 542}}
+                                  , react.createElement('div', { className: "w-third fl pr2"  , __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 546}}
                                     , react.createElement('textarea', {
                                       className: 
                                         "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
@@ -62841,7 +62828,7 @@ lyrtesmudnytbyrsenwegfyrmurtelreptegpecnelnevfes\
                                         height: 48,
                                         paddingTop: 14
                                       },
-                                      onChange: this.setAmount, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 543}}
+                                      onChange: this.setAmount, __self: this, __source: {fileName: _jsxFileName$6, lineNumber: 547}}
                                     )
                                   )
                                 )

@@ -331,8 +331,8 @@ export class Root extends Component {
     let unconfirmed = !!state.unConfirmedBalance ? state.unConfirmedBalance : 0;
 
     let createClasses = (!!state.seed || state.xpubkey)
-      ? "pointer db f9 mt3 green2 bg-gray0-d ba pv3 ph4 b--green2"
-      : "pointer db f9 mt3 gray2 ba bg-gray0-d pa2 pv3 ph4 b--gray3";
+      ? "pointer db f9 mt1 green2 bg-gray0-d ba pv1 ph1 b--green2"
+      : "pointer db f9 mt1 gray2 ba bg-gray0-d pa1 pv1 ph1 b--gray3";
 
     return (
       <BrowserRouter>
@@ -346,7 +346,11 @@ export class Root extends Component {
                   <div className={"cf w-20 fl pa2 overflow-x-hidden " +
                                   "bg-gray0-d white-d flex flex-column"}>
                     <button
-                      // onClick={this.startNode}
+                      onClick={this.startNode}
+                      className={createClasses}>
+                      Start Node Sync
+                    </button>
+                    <button
                       onClick={this.connectClientNode}
                       className={createClasses}>
                       Start Node Sync

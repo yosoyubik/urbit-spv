@@ -119,6 +119,9 @@
     ::
     +$  state-zero
       $:  =xpub
+          depth=@ud
+          max-look-ahead=@ud
+          payers=(map @uc (set @p))
       ==
     --
 ::
@@ -136,7 +139,10 @@
     ::
     ++  on-init
       ^-  (quip card _this)
-      :_  this(xpub ~)
+      ::  From bcoin: Account.MAX_LOOKAHEAD = 40;
+      ::  source: bcoin/lib/wallet/account.js
+      ::
+      :_  this(xpub ~, max-look-ahead 40)
       :~  launch-poke
           [%pass /bind/bitcoin %arvo %e %connect [~ /'~bitcoin'] %bitcoin]
       ==
@@ -176,9 +182,9 @@
       ^-  (quip card _this)
       :_  this
       ?+    path  ~|([%peer-bitcoin-strange path] !!)
-          [%bitcointile ~]    [%give %fact ~ %json !>(*json)]~
-          [%primary *]        [send-xpubkey]~
           [%http-response *]  ~
+          [%primary *]        [send-xpubkey]~
+          [%bitcointile ~]    [%give %fact ~ %json !>(*json)]~
       ==
     ::
     ++  on-agent  on-agent:def
@@ -201,7 +207,6 @@
       ==
     ++  on-fail   on-fail:def
     --
-::
 ::
 =,  bip32
 |_  =bowl:gall
@@ -272,12 +277,20 @@
     [[(derive-poke [%derive [ship network]])]~ state]
   ::
   ++  handle-derive
-    |=  [account=@ net=network]
+    |=  [payer=@p net=network]
     ^-  (quip card _state)
-    ~&  [src.bowl account net]
     |^
-    =/  addr=@uc  (derive-address random-index net)
-    :_  state
+    =/  addr=@uc
+      (derive-address (mod depth max-look-ahead) net)
+    :_  %_    state
+            depth
+          +(depth)
+        ::
+            payers
+          ?.  (~(has by payers) addr)
+            (~(put by payers) [addr (~(put in *(set @p)) payer)])
+          (~(jab by payers) [addr |=(p=(set @p) (~(put in p) payer))])
+        ==
     ?:  (team:title our.bowl src.bowl)
       ::  Local derive
       ::
@@ -378,8 +391,13 @@
 ::
 ++  random-index
   ^-  @ud
-  0
-  :: (~(rad og eny.bowl) (pow 2 31))
+  ::  This is problematic.
+  ::  See: https://github.com/bcoin-org/bcoin/issues/671#issuecomment-455669516
+  ::  tl;dr: a wallet won't pick up txs above the max lookahead unless
+  ::  a rescan is triggered, which is very ineficient, specially if the
+  ::  wallet is on a browser and uses a javascript-only implementation.
+  ::
+  (~(rad og eny.bowl) (pow 2 31))
 ::
 ++  parse-btc
   |=  b=@t

@@ -3,6 +3,10 @@
 ::    data:            scry command:
 ::    ________         _________________________________________
 ::    xpub             .^(tape %gx /=bitcoin=/xpub/noun)
+::    depth            .^(@ud %gx /=bitcoin=/depth/noun)
+::    all payers       .^((list (set @p)) %gx /=bitcoin=/payers/noun)
+::    payers/address   .^((set @p) %gx /=bitcoin=/payers/<btc-address>/noun)
+::    addresses        .^((set @uc) %gx /=bitcoin=/addresses/noun)
 ::
 /-  *bitcoin
 /+  *server, default-agent, verb, bip32, *bitcoin
@@ -203,7 +207,15 @@
       |=  =path
       ^-  (unit (unit cage))
       ?+  path  (on-peek:def path)
-          [%x %xpub ~]  ``noun+!>(xpub)
+          [%x %xpub ~]       ``noun+!>(xpub)
+          [%x %depth ~]      ``noun+!>(depth)
+        ::
+          [%x %payers @t ~]
+          ~&  i.t.t.path
+        ``noun+!>((~(get by payers) (parse-btc i.t.t.path)))
+        ::
+          [%x %payers ~]     ``noun+!>(~(val by payers))
+          [%x %addresses ~]  ``noun+!>(~(key by payers))
       ==
     ++  on-fail   on-fail:def
     --

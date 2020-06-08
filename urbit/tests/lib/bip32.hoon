@@ -31,6 +31,8 @@
         (zing (turn vectors check-sk))
         %+  category  "chaincode"
         (zing (turn vectors check-cc))
+        %+  category  "fingerprint"
+        (zing (turn vectors check-pf))
         %+  category  "address-from-xprv"
         (zing (check-addr-xprv vectors))
         %+  category  "address-from-xpub"

@@ -25,10 +25,6 @@
             	return module = { exports: {} }, fn(module, module.exports), module.exports;
             }
 
-            function getCjsExportFromNamespace (n) {
-            	return n && n['default'] || n;
-            }
-
             /*
             object-assign
             (c) Sindre Sorhus
@@ -50791,7 +50787,6 @@
                 global$2[key$1] = "esm";
               }
             }
-            //# sourceMappingURL=react-router.js.map
 
             /**
              * The public API for a <Router> that uses HTML5 history.
@@ -51091,7 +51086,6 @@
                 style: propTypes.object
               });
             }
-            //# sourceMappingURL=react-router-dom.js.map
 
             class InitialReducer {
                 reduce(json, state) {
@@ -55433,14 +55427,7 @@
               );
             }
 
-            var empty = {};
-
-            var empty$1 = /*#__PURE__*/Object.freeze({
-                        __proto__: null,
-                        'default': empty
-            });
-
-            var require$$0 = getCjsExportFromNamespace(empty$1);
+            var require$$0 = {};
 
             var bn = createCommonjsModule(function (module) {
             (function (module, exports) {

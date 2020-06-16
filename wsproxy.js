@@ -88,7 +88,7 @@ class WSProxy extends EventEmitter {
       ws.destroy();
       return;
     }
-    if ((raw[12] !== 127) && (!IP.isRoutable(raw) || IP.isOnion(raw)) ) {
+    if (((raw[12] !== 127) && (raw[12] !== 192)) && (!IP.isRoutable(raw) || IP.isOnion(raw)) ) {
     // if ( !IP.isRoutable(raw) || IP.isOnion(raw) ) {
       this.log(
         'Client is trying to connect to a bad ip: %s (%s).',

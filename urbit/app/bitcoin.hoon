@@ -185,6 +185,7 @@
       |=  =path
       ^-  (quip card _this)
       :_  this
+      ~&  path
       ?+    path  ~|([%peer-bitcoin-strange path] !!)
           [%http-response *]  ~
           [%primary *]        [send-xpubkey]~

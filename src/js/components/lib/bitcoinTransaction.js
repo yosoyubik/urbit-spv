@@ -59,7 +59,7 @@ export default class BitcoinTransaction extends Component {
     } = props;
     const outputs = [{
       //  Safely convert a BTC string to satoshis.
-      //  add component to choose units.
+      //  TODO: add component to choose units.
       //
       value: BCoin.Amount.value(amount),
       address: address.toString(node.network)
@@ -67,6 +67,7 @@ export default class BitcoinTransaction extends Component {
     if (connectedTo === "localNode") {
       // value and rate are expressed in satoshis when using Javascript
       const result = await wallet.send({
+        // TODO: add component to choose fees
         // maxFee: maxFee,
         account: "default",
         outputs: outputs
@@ -109,7 +110,7 @@ export default class BitcoinTransaction extends Component {
         // Signing
         mtx = await this.state.manager.signTransaction(mtx, inputData);
       } else {
-        console.log("ERROR: A siginig method has not been selected", "missing Erro component")
+        console.log("ERROR: A siginig method has not been selected", "TODO: missing Error component")
       }
       // The transaction should now verify.
       if (mtx.verify()) {

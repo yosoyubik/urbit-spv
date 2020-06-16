@@ -54,7 +54,7 @@ To install bcoin run:
 $ git clone git://github.com/bcoin-org/bcoin.git
 $ cd bcoin
 $ npm rebuild
-$ ./bin/bcoin --network=regtest --bip37=true
+$ ./bin/bcoin --network=regtest --bip37=true --http-port=48445 --listen-true --memory=false --log-level=spam --cors=true --wallet-cors=true --no-auth=true --host=127.0.0.1
 ```
 
 This will have a local copy of the bitcoin blockchain that can create blocks and relay transactions to other nodes.
@@ -64,9 +64,9 @@ To generate blocks and get some coins run:
 ```
 $ ./bin/bwallet-cli --network=regtest --account default address
 ## copy the address that's printed and paste it here:
-$ ./bin/bcoin-cli --network=regtest rpc generatetoaddress 101 <YOUR_ADDRESS>
+$ ./bin/bcoin-cli --http-port=48445 --network=regtest rpc generatetoaddress 101 <YOUR_ADDRESS>
 ## run this to check that your wallet has some coins
-$ ./bin/bwallet-cli --network=regtest --account default balance
+$ ./bin/bwallet-cli --network=regtest --account=default balance
 # This will send transactions to any addresses
 $ ./bin/bwallet-cli --network=regtest --account default send <ADDRESS> <AMOUNT>
 ```
@@ -82,11 +82,11 @@ server in this repo. In order to run it, open a new tab in your terminal and run
 node btc-proxy-server.js
 ```
 
-## Local BCoin nodes
+## Local two BCoin nodes
 
 - Full Node with Bip37 support and SPV node.
 ```
-$ ./bin/bcoin --network=regtest --bip37=true --http-port=48445 --listen-true --memory=false --log-level=spam
+$ ./bin/bcoin --network=regtest --bip37=true --http-port=48445 --listen-true --memory=false --log-level=spam --cors=true --wallet-cors=true --no-auth=true --host=127.0.0.1
 
 $ ./bin/bcoin --network=regtest --spv --http-port=48449 --wallet-http-port=48450 --memory=false --prefix ~/.bcoin_spv  --max-outbound=1
 ```
@@ -114,4 +114,8 @@ benefit crew supreme gesture quantum web media hazard theory mercy wing kitten
 
 ```
 abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
+```
+
+```
+legal winner thank year wave sausage worth useful legal winner thank yellow
 ```

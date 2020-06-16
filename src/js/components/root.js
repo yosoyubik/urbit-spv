@@ -19,9 +19,9 @@ export class Root extends Component {
     this.state = store.state;
     // this.state.seed = 'benefit crew supreme gesture quantum web media hazard theory mercy wing kitten';
     // this.state.progress = 0.0;
-    this.state.peers = [];
-    this.state.height = 0;
-    this.state.hash = '';
+    // this.state.peers = [];
+    // this.state.height = 0;
+    // this.state.hash = '';
     this.state.proxySocket = 'ws://127.0.0.1:9090';
     this.state.peerSeeds = ['127.0.0.1:48444'];
     this.state.network = 'regtest';
@@ -200,6 +200,8 @@ export class Root extends Component {
     spvNode.pool.on('peer open', () => { this.getInfo(); });
     spvNode.pool.on('packet', () => { this.getInfo(); });
 
+    const balance = await wallet.getBalance();
+
     this.setState({
       wallet: wallet,
       node: spvNode,
@@ -207,8 +209,25 @@ export class Root extends Component {
       coinType: coinType,
       spvNode: true,
       connectedTo: "spvNode",
-      connected: true
+      connected: true,
+      unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
+      confirmedBalance: BCoin.Amount.btc(balance.unconfirmed),
+      progress: spvNode.chain.getProgress(),
+      height: spvNode.chain.height,
+      hash: spvNode.chain.tip.rhash()
     });
+  }
+
+  parseChainEntry(raw) {
+    const chain = BCoin.ChainEntry.fromRaw(raw);
+    const start = 1231006505;
+    const current = chain.time - start;
+    const end = Math.floor(Date.now() / 1000) - start - 40 * 60;
+    return {
+      progress: (chain.height === 0) ? 0 : Math.min(1, current / end),
+      height: chain.height,
+      hash: Buffer.from(chain.hash).reverse().toString('hex')
+    }
   }
 
   async connectClientNode() {
@@ -322,6 +341,7 @@ export class Root extends Component {
       }
       if (wallet) {
         const balance = await wallet.getBalance();
+        console.log(balance);
         this.setState({
           wallet: wallet,
           unConfirmedBalance: BCoin.Amount.btc(balance.confirmed),
@@ -341,23 +361,12 @@ export class Root extends Component {
     });
   }
 
-  parseChainEntry(raw) {
-    const chain = BCoin.ChainEntry.fromRaw(raw);
-    const start = 1231006505;
-    const current = chain.time - start;
-    const end = Math.floor(Date.now() / 1000) - start - 40 * 60;
-    return {
-      progress: Math.min(1, current / end),
-      height: chain.height,
-      hash: Buffer.from(chain.hash).reverse().toString('hex')
-    }
-  }
-
   render() {
     const { props, state } = this;
     let node = !!state.node ? state.node : {};
     let confirmed = !!state.confirmedBalance ? state.confirmedBalance : 0;
     let unconfirmed = !!state.unConfirmedBalance ? state.unConfirmedBalance : 0;
+    let peers = (state.peers)? state.peers: [];
 
     let connectSPVClasses = (!!state.seed || state.xpubkey)
       ? "pointer db f9 mt1 green2 bg-gray0-d ba pv1 ph1 b--green2"
@@ -392,10 +401,10 @@ export class Root extends Component {
                   <div className={"cf w-60 fl pa2 pt4 overflow-x-hidden " +
                                   "bg-gray0-d white-d flex flex-column"}>
                     <div className="mono wrap">
-                      Current Height: {state.height}
+                      Current Height: {(state.height) ? state.height: 0}
                     </div>
                     <div className="mono wrap">
-                      Current Hash: {state.hash}
+                      Current Hash: {(state.hash) ? state.hash: '' }
                     </div>
                     { ProgressBar(( (state.progress) ? state.progress : 0) )}
                   </div>
@@ -458,7 +467,7 @@ export class Root extends Component {
                         <p className="f8 mt3 lh-copy db">Proxy Socket URL</p>
                         <textarea
                           className={
-                            "f8 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
+                            "f9 ba b--gray3 b--gray2-d bg-gray0-d white-d pa3 db w-100 mt2 " +
                             "focus-b--black focus-b--white-d"
                           }
                           rows={1}
@@ -560,7 +569,7 @@ export class Root extends Component {
                           Bytes (↑↓)
                         </div>
                       </div>
-                      {state.peers.map((peer, index) => {
+                      {peers.map((peer, index) => {
                         const addr = peer.addr;
                         const subver = peer.subver;
                         const bytes = `${peer.bytessent}/${peer.bytesrecv}`;

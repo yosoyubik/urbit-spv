@@ -122,7 +122,7 @@
   ::
   ++  check-addr-xpub
     |=  vectors=(list vector)
-    ::  we can only derive non-hardened keys from and xpub key
+    ::  we can only derive non-hardened keys from an xpub key
     ::  e.g. from m/0'/1/2' to m/0'/1/2'/2/1000000000
     ::
     ?>  ?=([^ ^ ^ ^ *] vectors)
